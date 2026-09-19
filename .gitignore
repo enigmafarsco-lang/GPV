@@ -1,0 +1,15 @@
+# simulation outputs + golden copies inside sim/ (sources are kept)
+sim/*
+!sim/*.v
+!sim/*_t.hex
+
+# Vivado project / build outputs
+vivado_prj/
+reports/
+*.xsa
+*.bit
+.Xil/
+*.jou
+*.log
+*.str
+vivado*.backup.*
