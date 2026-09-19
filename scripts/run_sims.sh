@@ -14,7 +14,7 @@ run_tb () {
     timeout 900 vvp "$name.vvp" | tail -6
     if ! timeout 5 true; then :; fi
 }
-for tb in tb_cordic tb_div tb_dds tb_fft tb_background tb_cfar tb_cluster tb_migrate tb_chain; do
+for tb in tb_cordic tb_div tb_dds tb_rx_adapter tb_fft tb_background tb_cfar tb_cluster tb_migrate tb_chain; do
     run_tb "$tb"
 done
 echo "================================"

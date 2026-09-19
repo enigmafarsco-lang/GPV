@@ -35,8 +35,7 @@ module tb_chain;
         .m_axis_dac_tdata(dac_d), .m_axis_dac_tlast(dac_l),
         .m_axis_dac_tuser_tone(dac_t), .m_axis_dac_tuser_pos(dac_p),
         .s_axis_adc_tvalid(1'b0), .s_axis_adc_tready(),
-        .s_axis_adc_tdata(32'd0), .s_axis_adc_tlast(1'b0),
-        .s_axis_adc_tuser_tone(8'd0), .s_axis_adc_tuser_pos(8'd0),
+        .s_axis_adc_tdata(128'd0), .s_axis_adc_tlast(1'b0),
         .sb_req(sb_req), .sb_ack(sb_ack),
         .s_axil_awvalid(awvalid), .s_axil_awready(awready), .s_axil_awaddr(awaddr),
         .s_axil_wvalid(wvalid), .s_axil_wready(wready), .s_axil_wdata(wdata),
@@ -64,6 +63,28 @@ module tb_chain;
             @(posedge clk);
             while (!(awready && wready)) @(posedge clk);
             awvalid <= 0; wvalid <= 0;
+            bready <= 1;
+            @(posedge clk);
+            while (!bvalid) @(posedge clk);
+            bready <= 0;
+            @(posedge clk);
+        end
+    endtask
+
+    // split-phase write: AW is accepted several cycles before W appears -
+    // exercises the independent-channel write FSM in gpr_axil_regs
+    task axi_wr_split(input [15:0] a, input [31:0] d);
+        begin
+            @(posedge clk);
+            awaddr <= a; awvalid <= 1;
+            @(posedge clk);
+            while (!awready) @(posedge clk);
+            awvalid <= 0;
+            repeat (3) @(posedge clk);
+            wdata <= d; wvalid <= 1;
+            @(posedge clk);
+            while (!wready) @(posedge clk);
+            wvalid <= 0;
             bready <= 1;
             @(posedge clk);
             while (!bvalid) @(posedge clk);
@@ -114,7 +135,9 @@ module tb_chain;
         axi_wr(16'h4C, 32'd0);            // mean CFAR
         axi_wr(16'h50, 32'd57313);        // alpha_q12
         axi_wr(16'h60, 32'd283);          // dr_q16
-        axi_wr(16'h64, 32'd3277);         // dx_q16
+        axi_wr_split(16'h64, 32'd3277);   // dx_q16 (split AW/W phases)
+        axi_wr_split(16'h68, 32'd0);      // sb_center_fw lo (unused in loopback)
+        axi_wr(16'h6C, 32'd0);            // sb_center_fw hi
         axi_wr(16'h0C, 32'h2);            // irq enable
         axi_wr(16'h04, 32'h1);            // RUN
 

@@ -51,6 +51,7 @@ module gpr_axil_regs (
     output reg  [15:0] pfloor_k,
     output reg  [4:0]  pfloor_sh,
     output reg  [31:0] dr_q16, dx_q16,
+    output wire [47:0] sb_center_fw,   // RFDC sub-band centre phase word
     // status inputs
     input  wire [31:0] rep1, rep2, rep3, rep4, rep5, rep6,
     input  wire        rep_done,
@@ -60,13 +61,26 @@ module gpr_axil_regs (
     output reg         irq
 );
     reg        irq_en, irq_ev;
-    reg [15:0] awaddr_r, araddr_r;
+    reg [15:0] araddr_r;
+    reg [31:0] sb_center_lo;
+    reg [15:0] sb_center_hi;
+    assign sb_center_fw = {sb_center_hi, sb_center_lo};
 
-    // write FSM: accept AW and W together, then respond
-    wire w_accept = s_awvalid && s_wvalid && s_awready && s_wready;
+    // write FSM: AW and W are accepted INDEPENDENTLY (AXI4 permits either
+    // channel first); the write executes once both are captured.
+    reg aw_have, w_have;
+    reg [15:0] awaddr_l;
+    reg [31:0] wdata_l;
+    wire aw_fire = s_awvalid && s_awready;
+    wire w_fire  = s_wvalid  && s_wready;
+    wire        w_exec = !s_bvalid && (aw_have || aw_fire) && (w_have || w_fire);
+    wire [15:0] w_addr = aw_fire ? s_awaddr : awaddr_l;
+    wire [31:0] w_data = w_fire  ? s_wdata  : wdata_l;
     always @(posedge clk) begin
         if (rst) begin
             s_awready <= 0; s_wready <= 0; s_bvalid <= 0; s_bresp <= 0;
+            aw_have <= 0; w_have <= 0; awaddr_l <= 0; wdata_l <= 0;
+            sb_center_lo <= 0; sb_center_hi <= 0;
             run <= 0; loop_mode <= 0; dwell_cyc <= 32'd12288; n_avg_m1 <= 0;
             agc_gain <= 16384; fft_gain <= 18872; nbg <= 1;
             inv_dr_q20 <= 0; roff_q20 <= 0; dx_q20 <= 0; dr_q20 <= 0;
@@ -75,36 +89,41 @@ module gpr_axil_regs (
             log2alpha_q26 <= 0; gamma2_q26 <= 0;
             pfloor_k <= 2874; pfloor_sh <= 28; dr_q16 <= 0; dx_q16 <= 0;
         end else begin
-            s_awready <= s_awvalid && s_wvalid && !s_bvalid;
-            s_wready  <= s_awvalid && s_wvalid && !s_bvalid;
-            awaddr_r  <= s_awaddr;
+            s_awready <= !aw_have && !s_bvalid;
+            s_wready  <= !w_have  && !s_bvalid;
+            if (aw_fire) begin aw_have <= 1'b1; awaddr_l <= s_awaddr; end
+            if (w_fire)  begin w_have  <= 1'b1; wdata_l  <= s_wdata;  end
             if (s_bvalid && s_bready) s_bvalid <= 0;
-            if (w_accept) begin
+            if (w_exec) begin
+                aw_have  <= 1'b0;
+                w_have   <= 1'b0;
                 s_bvalid <= 1;
                 s_bresp  <= 2'b00;
-                case (s_awaddr[15:2])
-                (16'h04 >> 2): begin run      <= s_wdata[0]; loop_mode <= s_wdata[1]; end
-                (16'h10 >> 2): dwell_cyc     <= s_wdata;
-                (16'h14 >> 2): n_avg_m1      <= s_wdata[7:0];
-                (16'h18 >> 2): agc_gain      <= s_wdata[15:0];
-                (16'h1C >> 2): fft_gain      <= s_wdata[15:0];
-                (16'h20 >> 2): nbg           <= s_wdata[3:0];
-                (16'h24 >> 2): inv_dr_q20    <= s_wdata;
-                (16'h28 >> 2): roff_q20      <= s_wdata;
-                (16'h2C >> 2): dx_q20        <= s_wdata;
-                (16'h30 >> 2): dr_q20        <= s_wdata;
-                (16'h34 >> 2): kbeta_q16     <= s_wdata;
-                (16'h38 >> 2): alpha2_q8     <= $signed(s_wdata[15:0]);
-                (16'h3C >> 2): begin max_bin <= s_wdata[15:0]; out_scale_q8 <= s_wdata[31:16]; end
-                (16'h44 >> 2): b_min0        <= s_wdata[15:0];
-                (16'h48 >> 2): b_max0        <= s_wdata[15:0];
-                (16'h4C >> 2): cfar_mode     <= s_wdata[0];
-                (16'h50 >> 2): alpha_q12     <= s_wdata[15:0];
-                (16'h54 >> 2): log2alpha_q26 <= $signed(s_wdata);
-                (16'h58 >> 2): gamma2_q26    <= $signed(s_wdata);
-                (16'h5C >> 2): begin pfloor_k <= s_wdata[31:16]; pfloor_sh <= s_wdata[4:0]; end
-                (16'h60 >> 2): dr_q16        <= s_wdata;
-                (16'h64 >> 2): dx_q16        <= s_wdata;
+                case (w_addr[15:2])
+                (16'h04 >> 2): begin run      <= w_data[0]; loop_mode <= w_data[1]; end
+                (16'h10 >> 2): dwell_cyc     <= w_data;
+                (16'h14 >> 2): n_avg_m1      <= w_data[7:0];
+                (16'h18 >> 2): agc_gain      <= w_data[15:0];
+                (16'h1C >> 2): fft_gain      <= w_data[15:0];
+                (16'h20 >> 2): nbg           <= w_data[3:0];
+                (16'h24 >> 2): inv_dr_q20    <= w_data;
+                (16'h28 >> 2): roff_q20      <= w_data;
+                (16'h2C >> 2): dx_q20        <= w_data;
+                (16'h30 >> 2): dr_q20        <= w_data;
+                (16'h34 >> 2): kbeta_q16     <= w_data;
+                (16'h38 >> 2): alpha2_q8     <= $signed(w_data[15:0]);
+                (16'h3C >> 2): begin max_bin <= w_data[15:0]; out_scale_q8 <= w_data[31:16]; end
+                (16'h44 >> 2): b_min0        <= w_data[15:0];
+                (16'h48 >> 2): b_max0        <= w_data[15:0];
+                (16'h4C >> 2): cfar_mode     <= w_data[0];
+                (16'h50 >> 2): alpha_q12     <= w_data[15:0];
+                (16'h54 >> 2): log2alpha_q26 <= $signed(w_data);
+                (16'h58 >> 2): gamma2_q26    <= $signed(w_data);
+                (16'h5C >> 2): begin pfloor_k <= w_data[31:16]; pfloor_sh <= w_data[4:0]; end
+                (16'h60 >> 2): dr_q16        <= w_data;
+                (16'h64 >> 2): dx_q16        <= w_data;
+                (16'h68 >> 2): sb_center_lo  <= w_data;
+                (16'h6C >> 2): sb_center_hi  <= w_data[15:0];
                 default: ;
                 endcase
             end
@@ -119,6 +138,8 @@ module gpr_axil_regs (
         (16'h04 >> 2): rdata_c = {30'd0, loop_mode, run};
         (16'h08 >> 2): rdata_c = {7'd0, bg_overrun, 7'd0, frame_count, 6'd0, irq_ev, 1'b0};
         (16'h0C >> 2): rdata_c = {30'd0, irq_en, irq_ev};
+        (16'h68 >> 2): rdata_c = sb_center_lo;
+        (16'h6C >> 2): rdata_c = {16'd0, sb_center_hi};
         (16'h80 >> 2): rdata_c = rep1;
         (16'h84 >> 2): rdata_c = rep2;
         (16'h88 >> 2): rdata_c = rep3;
@@ -153,12 +174,12 @@ module gpr_axil_regs (
             if (rep_done) irq_ev <= 1'b1;
             if (irq_ev && irq_en) irq <= 1'b1;
             // W1C at 0x0C bit0
-            if (w_accept && (s_awaddr == 16'h0C) && s_wdata[0]) begin
+            if (w_exec && (w_addr == 16'h0C) && w_data[0]) begin
                 irq_ev <= 1'b0;
                 irq    <= 1'b0;
             end
-            if (w_accept && (s_awaddr == 16'h0C))
-                irq_en <= s_wdata[1];
+            if (w_exec && (w_addr == 16'h0C))
+                irq_en <= w_data[1];
         end
     end
 endmodule

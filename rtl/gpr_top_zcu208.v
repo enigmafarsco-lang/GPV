@@ -20,6 +20,7 @@
 // ---------------------------------------------------------------------------
 `timescale 1ns / 1ps
 module gpr_top_zcu208 #(
+    parameter RX_SPC   = 4,      // RFDC samples per input beat (128-bit AXIS)
     parameter N_TONES  = 256,
     parameter N_POS    = 200,
     parameter N_IFFT   = 2048,
@@ -47,12 +48,10 @@ module gpr_top_zcu208 #(
     output wire [7:0]  m_axis_dac_tuser_tone,
     output wire [7:0]  m_axis_dac_tuser_pos,
     // RFDC ADC stream (s) - from decimation/ADC tile
-    input  wire        s_axis_adc_tvalid,
-    output wire        s_axis_adc_tready,
-    input  wire [31:0] s_axis_adc_tdata,
-    input  wire        s_axis_adc_tlast,
-    input  wire [7:0]  s_axis_adc_tuser_tone,
-    input  wire [7:0]  s_axis_adc_tuser_pos,
+    input  wire                  s_axis_adc_tvalid,
+    output wire                  s_axis_adc_tready,
+    input  wire [RX_SPC*32-1:0]  s_axis_adc_tdata,   // RFDC packed I/Q beats
+    input  wire                  s_axis_adc_tlast,   // ignored (scheduler counts)
     // RFDC mixer re-tune handshake (PS driver)
     output wire        sb_req,
     input  wire        sb_ack,
@@ -151,6 +150,9 @@ module gpr_top_zcu208 #(
     // run = acquire exactly one frame (N_POS positions); pos_done latches the
     // stop until the host clears and re-writes CTRL.run.
     wire        dds_pos_done;
+    wire        rxa_pos_done;
+    // the frame ends when the ACTIVE RX path has delivered N_POS positions
+    wire        frame_pos_done = loopback ? dds_pos_done : rxa_pos_done;
     reg         frame_done;
     reg [15:0]  pos_cnt;
     wire        dds_run = run && !frame_done;
@@ -160,7 +162,7 @@ module gpr_top_zcu208 #(
         if (rst || !run) begin
             frame_done <= 1'b0;
             pos_cnt    <= 16'd0;
-        end else if (dds_pos_done) begin
+        end else if (frame_pos_done) begin
             pos_cnt <= pos_cnt + 1'b1;
             if (pos_cnt == N_POS-1)
                 frame_done <= 1'b1;
@@ -213,15 +215,36 @@ module gpr_top_zcu208 #(
         .sb_req(sb_req), .sb_ack(sb_ack), .pos_done(dds_pos_done),
         .tone_seq_idx());
 
-    // loopback mux: RFDC or internal
-    wire        adcv = loopback ? dds_v  : s_axis_adc_tvalid;
-    wire [31:0] adcd = loopback ? dds_d  : s_axis_adc_tdata;
-    wire        adcl = loopback ? dds_l  : s_axis_adc_tlast;
-    wire [7:0]  adct = loopback ? dds_tone : s_axis_adc_tuser_tone;
-    wire [7:0]  adcp = loopback ? dds_pos  : s_axis_adc_tuser_pos;
+    // ---- real RX path: RFDC beats -> gpr_rx_adapter ------------------------
+    // gearbox (RX_SPC samples/beat), beat scheduler (tone/pos tags), residual
+    // derotation by fw_rom[tone]-sb_center_fw, dwell integration + exact
+    // normalisation.  Emits one tagged beat per tone, DDS-compatible.
+    wire        rxa_v, rxa_r, rxa_l, rxa_rd;
+    wire [31:0] rxa_d;
+    wire [7:0]  rxa_tone, rxa_pos;
+    wire [47:0] sb_center_fw;
+    gpr_rx_adapter #(
+        .N_TONES(N_TONES), .SPC(RX_SPC),
+        .FW_FILE(FW_FILE), .TIDX_FILE(TIDX_FILE)
+    ) u_rxa (
+        .clk(clk), .rst(rst),
+        .dwell_cyc(dwell_cyc), .n_avg_m1(n_avg_m1),
+        .sb_center_fw(sb_center_fw),
+        .s_tvalid(s_axis_adc_tvalid), .s_tready(s_axis_adc_tready),
+        .s_tdata(s_axis_adc_tdata), .s_tlast(s_axis_adc_tlast),
+        .m_tvalid(rxa_v), .m_tready(rxa_rd), .m_tdata(rxa_d), .m_tlast(rxa_l),
+        .m_tuser_tone(rxa_tone), .m_tuser_pos(rxa_pos),
+        .pos_done(rxa_pos_done), .tone_seq_idx());
+
+    // loopback mux: RFDC/adapter path or internal DDS path
+    wire        adcv = loopback ? dds_v  : rxa_v;
+    wire [31:0] adcd = loopback ? dds_d  : rxa_d;
+    wire        adcl = loopback ? dds_l  : rxa_l;
+    wire [7:0]  adct = loopback ? dds_tone : rxa_tone;
+    wire [7:0]  adcp = loopback ? dds_pos  : rxa_pos;
     wire        adcr;
+    assign rxa_rd = loopback ? 1'b0 : adcr;
     assign dds_r = loopback ? adcr : m_axis_dac_tready;
-    assign s_axis_adc_tready = loopback ? 1'b0 : adcr;
     assign m_axis_dac_tvalid = loopback ? 1'b0 : dds_v;
     assign m_axis_dac_tdata  = dds_d;
     assign m_axis_dac_tlast  = dds_l;
@@ -365,6 +388,7 @@ module gpr_top_zcu208 #(
         .alpha_q12(alpha_q12), .log2alpha_q26(log2alpha_q26),
         .gamma2_q26(gamma2_q26), .pfloor_k(pfloor_k), .pfloor_sh(pfloor_sh),
         .dr_q16(dr_q16), .dx_q16(dx_q16),
+        .sb_center_fw(sb_center_fw),
         .rep1(rep1), .rep2(rep2), .rep3(rep3), .rep4(rep4),
         .rep5(rep5), .rep6(rep6), .rep_done(rep_done),
         .frame_count(frame_count), .bg_overrun(bg_overrun),
