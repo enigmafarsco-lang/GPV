@@ -1,0 +1,8 @@
+waveform: {f_start_hz: 500000000.0, f_stop_hz: 3000000000.0, n_tones: 256, n_ifft: 2048, dwell_s: 0.00005, averages: 32, window: kaiser, window_beta: 6.0}
+environment: {soil_name: dry_to_moderate_soil, epsilon_r: 3.04, conductivity_s_m: 0.005, moisture_vv: 0.08, attenuation_db_m: 4.69, standoff_m: 0.50}
+scan: {x_start_m: 0.0, x_stop_m: 10.0, n_positions: 200, line_spacing_m: 0.50, n_lines: 1, velocity_m_s: 0.2}
+background: {method: median, svd_modes: 1}
+migration: {enabled: true, method: kirchhoff, x_pixels: 200, z_pixels: 320, max_depth_m: 1.5, aperture_m: 1.5}
+detection: {enabled: true, method: ca_cfar_2d, pfa: 0.00001, guard_x: 2, guard_z: 2, ref_x: 8, ref_z: 8, min_cluster_pixels: 4, min_depth_m: 0.03, max_depth_m: 1.3}
+classification: {enabled: true, mode: rules_or_model, model_file: '', min_confidence: 0.60}
+visualization: {dynamic_range_db: 55, depth_min_m: 0, depth_max_m: 1.5, colormap: turbo}

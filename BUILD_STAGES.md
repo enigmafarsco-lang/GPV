@@ -1,0 +1,23 @@
+# Hybrid V3 build stages
+
+- `step00_preflight` — tool/part/base checks
+- `step02_hls_scheduler` — shared TX/context sweep scheduler
+- `step03_hls_rxextract` — residual derotation + dwell integration
+- `step04_hls_sweepavg` — coherent averaging across sweeps
+- `step05_hls_cal` — calibration × window coefficient multiply
+- `step06_hls_pad` — zero padding + FFT config
+- `step07_hls_background` — low-latency streaming EWMA
+- `step08_hls_power` — range power
+- `step09_hls_cfar1d` — diagnostic 1D CFAR
+- `step10_hls_imaging` — DDR median, coherent migration, 2D CFAR, clustering
+- `step11_collect_ip` — packaged IP repository
+- `step12_vivado_project` — clone verified ZCU208 RFDC/MTS base
+- `step13_vivado_integrate` — create/map `gpr_v3`
+- `step14_vivado_validate` — fail-hard block-design validation
+- `step15_synth` — synthesis
+- `step16_impl` — place/route + WNS gate
+- `step17_bitstream`
+- `step18_export_xsa`
+- `step19_hil_vectors`
+- `step20_model_regression`
+- `step21_package`

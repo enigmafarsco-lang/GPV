@@ -1,0 +1,9 @@
+stage=step06_hls_pad
+started_utc=2026-09-19T21:26:40Z
+command=make --no-print-directory -C ip/custom/gpr_zero_pad_cfg all 
+vitis_hls -f build_hls.tcl
+test -f "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/ip/custom/gpr_zero_pad_cfg/gpr_zero_pad_cfg_hls/solution1/impl/ip/component.xml" || { echo "Missing HLS export /mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/ip/custom/gpr_zero_pad_cfg/gpr_zero_pad_cfg_hls/solution1/impl/ip/component.xml"; exit 2; }
+rm -rf "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/build/ip_repo/gpr_zero_pad_cfg"
+mkdir -p "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/build/ip_repo/gpr_zero_pad_cfg"
+cp -a "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/ip/custom/gpr_zero_pad_cfg/gpr_zero_pad_cfg_hls/solution1/impl/ip/." "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/build/ip_repo/gpr_zero_pad_cfg/"
+result=PASS

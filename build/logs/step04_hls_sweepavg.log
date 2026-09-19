@@ -1,0 +1,9 @@
+stage=step04_hls_sweepavg
+started_utc=2026-09-19T21:26:39Z
+command=make --no-print-directory -C ip/custom/gpr_sweep_average all 
+vitis_hls -f build_hls.tcl
+test -f "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/ip/custom/gpr_sweep_average/gpr_sweep_average_hls/solution1/impl/ip/component.xml" || { echo "Missing HLS export /mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/ip/custom/gpr_sweep_average/gpr_sweep_average_hls/solution1/impl/ip/component.xml"; exit 2; }
+rm -rf "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/build/ip_repo/gpr_sweep_average"
+mkdir -p "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/build/ip_repo/gpr_sweep_average"
+cp -a "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/ip/custom/gpr_sweep_average/gpr_sweep_average_hls/solution1/impl/ip/." "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/build/ip_repo/gpr_sweep_average/"
+result=PASS

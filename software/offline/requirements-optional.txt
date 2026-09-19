@@ -1,0 +1,4 @@
+h5py>=3.8
+pandas>=2.0
+scikit-learn>=1.2
+pytest>=7.0

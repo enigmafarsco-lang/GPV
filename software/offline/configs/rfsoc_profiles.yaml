@@ -1,0 +1,16 @@
+profiles:
+  zcu208_single_channel:
+    part: xczu48dr-2fsvg1517e
+    dac_tile: 0
+    dac_block: 0
+    adc_tile: 0
+    adc_block: 0
+    sample_format: ci16_le
+    mts_required: true
+    note: exact RFDC sample rate, mixer settings, tile clocks and MTS settings come from the verified Vivado base/XSA
+  zcu208_dual_rx:
+    part: xczu48dr-2fsvg1517e
+    rx_channels: 2
+    sample_format: ci16_le
+    mts_required: true
+    note: intended for dual-polarization or reference-channel calibration; channel mapping must match the XSA

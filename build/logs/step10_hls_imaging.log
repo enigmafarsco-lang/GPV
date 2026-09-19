@@ -1,0 +1,24 @@
+stage=step10_hls_imaging
+started_utc=2026-09-19T21:26:41Z
+command=bash -lc make\ --no-print-directory\ -C\ ip/custom/gpr_background_median_accel\ all\ \&\&\ make\ --no-print-directory\ -C\ ip/custom/gpr_kirchhoff_coherent_accel\ all\ \&\&\ make\ --no-print-directory\ -C\ ip/custom/gpr_cfar2d_accel\ all\ \&\&\ make\ --no-print-directory\ -C\ ip/custom/gpr_cluster2d_accel\ all 
+vitis_hls -f build_hls.tcl
+test -f "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/ip/custom/gpr_background_median_accel/gpr_background_median_accel_hls/solution1/impl/ip/component.xml" || { echo "Missing HLS export /mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/ip/custom/gpr_background_median_accel/gpr_background_median_accel_hls/solution1/impl/ip/component.xml"; exit 2; }
+rm -rf "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/build/ip_repo/gpr_background_median_accel"
+mkdir -p "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/build/ip_repo/gpr_background_median_accel"
+cp -a "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/ip/custom/gpr_background_median_accel/gpr_background_median_accel_hls/solution1/impl/ip/." "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/build/ip_repo/gpr_background_median_accel/"
+vitis_hls -f build_hls.tcl
+test -f "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/ip/custom/gpr_kirchhoff_coherent_accel/gpr_kirchhoff_coherent_accel_hls/solution1/impl/ip/component.xml" || { echo "Missing HLS export /mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/ip/custom/gpr_kirchhoff_coherent_accel/gpr_kirchhoff_coherent_accel_hls/solution1/impl/ip/component.xml"; exit 2; }
+rm -rf "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/build/ip_repo/gpr_kirchhoff_coherent_accel"
+mkdir -p "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/build/ip_repo/gpr_kirchhoff_coherent_accel"
+cp -a "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/ip/custom/gpr_kirchhoff_coherent_accel/gpr_kirchhoff_coherent_accel_hls/solution1/impl/ip/." "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/build/ip_repo/gpr_kirchhoff_coherent_accel/"
+vitis_hls -f build_hls.tcl
+test -f "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/ip/custom/gpr_cfar2d_accel/gpr_cfar2d_accel_hls/solution1/impl/ip/component.xml" || { echo "Missing HLS export /mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/ip/custom/gpr_cfar2d_accel/gpr_cfar2d_accel_hls/solution1/impl/ip/component.xml"; exit 2; }
+rm -rf "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/build/ip_repo/gpr_cfar2d_accel"
+mkdir -p "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/build/ip_repo/gpr_cfar2d_accel"
+cp -a "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/ip/custom/gpr_cfar2d_accel/gpr_cfar2d_accel_hls/solution1/impl/ip/." "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/build/ip_repo/gpr_cfar2d_accel/"
+vitis_hls -f build_hls.tcl
+test -f "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/ip/custom/gpr_cluster2d_accel/gpr_cluster2d_accel_hls/solution1/impl/ip/component.xml" || { echo "Missing HLS export /mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/ip/custom/gpr_cluster2d_accel/gpr_cluster2d_accel_hls/solution1/impl/ip/component.xml"; exit 2; }
+rm -rf "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/build/ip_repo/gpr_cluster2d_accel"
+mkdir -p "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/build/ip_repo/gpr_cluster2d_accel"
+cp -a "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/ip/custom/gpr_cluster2d_accel/gpr_cluster2d_accel_hls/solution1/impl/ip/." "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/build/ip_repo/gpr_cluster2d_accel/"
+result=PASS

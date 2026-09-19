@@ -1,0 +1,4 @@
+profiles:
+  high_sensitivity: {pfa: 0.0001, guard_x: 2, guard_z: 2, ref_x: 8, ref_z: 8, min_cluster_pixels: 3}
+  balanced: {pfa: 0.00001, guard_x: 2, guard_z: 2, ref_x: 8, ref_z: 8, min_cluster_pixels: 4}
+  low_false_alarm: {pfa: 0.000001, guard_x: 3, guard_z: 3, ref_x: 12, ref_z: 12, min_cluster_pixels: 6}

@@ -1,0 +1,7 @@
+waveform: {f_start_hz: 100000000.0, f_stop_hz: 1000000000.0, n_tones: 512, n_ifft: 4096, averages: 64, window: kaiser, window_beta: 6.5}
+environment: {soil_name: low_loss_ground, epsilon_r: 4.5, conductivity_s_m: 0.002, moisture_vv: 0.05, attenuation_db_m: 1.5, standoff_m: 0.05}
+scan: {x_start_m: 0, x_stop_m: 20, n_positions: 400, line_spacing_m: 0.25, n_lines: 1}
+background: {method: median}
+migration: {enabled: true, method: kirchhoff, x_pixels: 400, z_pixels: 500, max_depth_m: 5.0, aperture_m: 3.0}
+detection: {pfa: 0.000001, guard_x: 2, guard_z: 2, ref_x: 10, ref_z: 10, min_depth_m: 0.10, max_depth_m: 5.0}
+visualization: {dynamic_range_db: 60, depth_max_m: 5.0}

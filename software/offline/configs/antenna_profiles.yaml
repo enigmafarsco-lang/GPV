@@ -1,0 +1,20 @@
+profiles:
+  bowtie_ground:
+    configuration: bistatic
+    tx_rx_spacing_m: 0.15
+    polarization: co-pol
+    gain_dbi: 5.0
+    beamwidth_deg: 75
+    standoff_m: 0.03
+  bowtie_uav:
+    configuration: bistatic
+    tx_rx_spacing_m: 0.25
+    polarization: co-pol
+    gain_dbi: 6.0
+    beamwidth_deg: 65
+    standoff_m: 0.5
+  dual_pol_research:
+    configuration: bistatic
+    tx_rx_spacing_m: 0.20
+    polarization: dual-pol
+    note: store co-pol and cross-pol channels separately for trained classification/anisotropy studies

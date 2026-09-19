@@ -1,0 +1,4 @@
+profiles:
+  field_default: {dynamic_range_db: 55, colormap: turbo, volume_threshold_db: -18}
+  weak_target: {dynamic_range_db: 70, colormap: turbo, volume_threshold_db: -28}
+  high_contrast: {dynamic_range_db: 45, colormap: gray, volume_threshold_db: -14}

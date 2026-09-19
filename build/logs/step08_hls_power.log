@@ -1,0 +1,9 @@
+stage=step08_hls_power
+started_utc=2026-09-19T21:26:40Z
+command=make --no-print-directory -C ip/custom/gpr_power32 all 
+vitis_hls -f build_hls.tcl
+test -f "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/ip/custom/gpr_power32/gpr_power32_hls/solution1/impl/ip/component.xml" || { echo "Missing HLS export /mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/ip/custom/gpr_power32/gpr_power32_hls/solution1/impl/ip/component.xml"; exit 2; }
+rm -rf "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/build/ip_repo/gpr_power32"
+mkdir -p "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/build/ip_repo/gpr_power32"
+cp -a "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/ip/custom/gpr_power32/gpr_power32_hls/solution1/impl/ip/." "/mnt/data/RFSoC_ZCU208_GPR_V3_Hybrid/build/ip_repo/gpr_power32/"
+result=PASS

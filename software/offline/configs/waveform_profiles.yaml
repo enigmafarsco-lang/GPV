@@ -1,0 +1,22 @@
+profiles:
+  shallow_high_resolution:
+    f_start_hz: 500000000
+    f_stop_hz: 3000000000
+    n_tones: 256
+    n_ifft: 2048
+    window: kaiser
+    window_beta: 6.0
+  utility_balanced:
+    f_start_hz: 250000000
+    f_stop_hz: 1500000000
+    n_tones: 512
+    n_ifft: 4096
+    window: kaiser
+    window_beta: 6.0
+  deep_low_frequency:
+    f_start_hz: 100000000
+    f_stop_hz: 800000000
+    n_tones: 512
+    n_ifft: 4096
+    window: kaiser
+    window_beta: 6.5

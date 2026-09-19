@@ -1,0 +1,4 @@
+profiles:
+  dry_sand: {epsilon_r: 4.0, conductivity_s_m: 0.001, moisture_vv: 0.03, note: site-calibration starting point}
+  moist_soil: {epsilon_r: 9.0, conductivity_s_m: 0.02, moisture_vv: 0.18, note: estimate from hyperbola velocity or dielectric measurement}
+  wet_clay: {epsilon_r: 25.0, conductivity_s_m: 0.1, moisture_vv: 0.30, note: high attenuation; lower frequency recommended}

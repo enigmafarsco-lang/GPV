@@ -1,0 +1,6 @@
+profiles:
+  generic_utility: {classes: [metal_generic, pipe_or_cable, plate_or_rebar, void_or_dielectric, unknown], min_confidence: 0.60}
+  trained_material_lab:
+    classes: [steel, copper, aluminum, cast_iron, metal_generic, unknown]
+    min_confidence: 0.75
+    requirements: [labeled site-specific dataset, same antennas and frequency band, held-out validation, suppress material label below confidence threshold]

@@ -1,0 +1,952 @@
+{
+  "package": "RFSoC_ZCU208_GPR_V3_Hybrid",
+  "version": "3.0.0-hybrid",
+  "target": "AMD/Xilinx ZCU208 XCZU48DR-2FSVG1517E",
+  "vivado_part": "xczu48dr-2fsvg1517e",
+  "comparison_basis": "enigmafarsco-lang/GPV main d22f442513955d059920798f1cbce6998b4d522b",
+  "validation": {
+    "make_lint": "PASS",
+    "hybrid_model_regression": "5/5 PASS",
+    "offline_tests": "5/5 PASS",
+    "synthetic_offline_replay": "PASS, 256 tones, 200 positions, 2 detections",
+    "vivado_vitis_hardware": "NOT RUN in packaging environment"
+  },
+  "file_count_excluding_manifests": 187,
+  "files": [
+    {
+      "path": "BUILD_STAGES.md",
+      "bytes": 1018,
+      "sha256": "df8145321cb68af097cc7e5da2a356bc839726a58c05e9672faad731681e7bee"
+    },
+    {
+      "path": "DOA_TO_GPR_MAPPING.md",
+      "bytes": 1349,
+      "sha256": "7bdd536bdacc5a34e0fe820d6765f2a60138b45c70e6280d7bd3fafcf7bdc654"
+    },
+    {
+      "path": "FILE_AND_CODE_GUIDE.md",
+      "bytes": 1545,
+      "sha256": "ba821f65808f364acabc91303239b33f8235a546dd36f0e6ce47ca70dc9f3182"
+    },
+    {
+      "path": "FULLSTACK_VALIDATION_REPORT.md",
+      "bytes": 1338,
+      "sha256": "50d355b66b9566a1e120c9edb3b0db7f3122433e490ec2ea846dcb86b89192df"
+    },
+    {
+      "path": "GPR_ZCU208_IMPLEMENTATION_GUIDE.md",
+      "bytes": 5822,
+      "sha256": "89d670bd32489bfe4a5919c263e469501e3c7658f8f2f1f0e66d58e94ba12040"
+    },
+    {
+      "path": "GPV_COMPARISON_NOTES.md",
+      "bytes": 1038,
+      "sha256": "0a940c20538008d154936f1eb534c22e7da66e132ff9887f272c328eb709b0c1"
+    },
+    {
+      "path": "HYBRID_V3_CHANGES.md",
+      "bytes": 2100,
+      "sha256": "dd4846ce955febf699d4575d9d4c14e44a2912bc7298239eb7b8b73bb37fcf67"
+    },
+    {
+      "path": "Makefile",
+      "bytes": 8338,
+      "sha256": "c59bfcdfc506a446724e44a8b5cd2933d29458e42a0689f577310e159eec0cfe"
+    },
+    {
+      "path": "README.md",
+      "bytes": 4344,
+      "sha256": "62e529595e33ea51f71a05ee865761716e24455e98609c25c61e62e4dfcd49e7"
+    },
+    {
+      "path": "VALIDATION_REPORT.md",
+      "bytes": 1328,
+      "sha256": "70654290bb60b5ddee208d9361718ee0441412405a5d16c03b152f4b819a42c8"
+    },
+    {
+      "path": "VERSION",
+      "bytes": 13,
+      "sha256": "92e785a745b1c0d2e7ee67320c28c41930d428559c0fba8b5c34477a8331bf6d"
+    },
+    {
+      "path": "build/.stamps/step02_hls_scheduler.done",
+      "bytes": 106,
+      "sha256": "1527096c9f05a8d965621e7796713caa56881b6a40cf0e87c4ef6f902af584fa"
+    },
+    {
+      "path": "build/.stamps/step03_hls_rxextract.done",
+      "bytes": 106,
+      "sha256": "978543fdd9269244ed47eb2fc124738278540e2610fe78a7da8a096d77f13128"
+    },
+    {
+      "path": "build/.stamps/step04_hls_sweepavg.done",
+      "bytes": 105,
+      "sha256": "21f3ce03b294a02b2c05d1a80d495b4df0d7a27cab23fc6580204636c0781de6"
+    },
+    {
+      "path": "build/.stamps/step05_hls_cal.done",
+      "bytes": 100,
+      "sha256": "35c085487ed8e2829129208a019cf5761bc009f302fb273a626b629670e93e0c"
+    },
+    {
+      "path": "build/.stamps/step06_hls_pad.done",
+      "bytes": 100,
+      "sha256": "87a2a6c0a11a107b7a8600e17da05ca9c35e2e714215ac0f8b8c50243e711ad9"
+    },
+    {
+      "path": "build/.stamps/step07_hls_background.done",
+      "bytes": 107,
+      "sha256": "657d1f6d458e11073c056f16f8b91b266a1d3220be8cc91aae45fc496f9590cc"
+    },
+    {
+      "path": "build/.stamps/step08_hls_power.done",
+      "bytes": 102,
+      "sha256": "e990e6fb17f8934c7de847dbd276fd48c503c7a36571f4d40debc4a845ea6bfd"
+    },
+    {
+      "path": "build/.stamps/step09_hls_cfar1d.done",
+      "bytes": 103,
+      "sha256": "83125c41ac3568471736db2b73dbd03c15188be635532a732159c5be19e08289"
+    },
+    {
+      "path": "build/.stamps/step10_hls_imaging.done",
+      "bytes": 104,
+      "sha256": "6d14af4755b43686ea0f98587835b496a93d7227468254e167ce0d10eaf28c3f"
+    },
+    {
+      "path": "build/logs/step02_hls_scheduler.log",
+      "bytes": 824,
+      "sha256": "16812a0dd5eed6c6569863609e0e3d17824994fbbe8d3c4829bd3ac5b69b1f03"
+    },
+    {
+      "path": "build/logs/step03_hls_rxextract.log",
+      "bytes": 844,
+      "sha256": "914b03f5a2b4adc7a334fb4b96c834c0508ed2a122e1e3340a64a437df661f13"
+    },
+    {
+      "path": "build/logs/step04_hls_sweepavg.log",
+      "bytes": 803,
+      "sha256": "1bab6a4d4103edf355f87f876eca1b80c0685705d48c9bdd4c37bf1b6c0245d3"
+    },
+    {
+      "path": "build/logs/step05_hls_cal.log",
+      "bytes": 768,
+      "sha256": "e0730afc2cd776c64ffdc5128f767bc014f507d46d7e18d742aeedc9bac48e94"
+    },
+    {
+      "path": "build/logs/step06_hls_pad.log",
+      "bytes": 788,
+      "sha256": "1199e2c5363073fbb8df835323f5b98ddec539f68215df0ba05ca8c9f7d4ce95"
+    },
+    {
+      "path": "build/logs/step07_hls_background.log",
+      "bytes": 825,
+      "sha256": "8db09e0db13f07ea65b43d2249fe8817d462890a545be226ac8889098767a49c"
+    },
+    {
+      "path": "build/logs/step08_hls_power.log",
+      "bytes": 740,
+      "sha256": "1cbe4c7370ba073e8b96278cbe95627340f8d2ddfd369952b39de1d9ce7d07a7"
+    },
+    {
+      "path": "build/logs/step09_hls_cfar1d.log",
+      "bytes": 731,
+      "sha256": "00ed90a64f51db8cafecec700f65178f1a381b92a74d71bc933261b0ba076839"
+    },
+    {
+      "path": "build/logs/step10_hls_imaging.log",
+      "bytes": 3237,
+      "sha256": "a80c918acfa770a8e72581e08ed8eda26d3364e2af3f2241234c911a917b59ca"
+    },
+    {
+      "path": "common/scripts/README.md",
+      "bytes": 52,
+      "sha256": "b76a2ccf5f1aeba92616e3ad4df6c292eff3461072305cf7d3cd9a0bb790836f"
+    },
+    {
+      "path": "common/vivado/11_create_project_from_base.tcl",
+      "bytes": 934,
+      "sha256": "8321a019fa54e3ea56732f72aa714fed2be7dd7b1cd947718346375a59b7eff5"
+    },
+    {
+      "path": "common/vivado/12_integrate_gpr_v3.tcl",
+      "bytes": 893,
+      "sha256": "93f7c1a617c7ca30a4996f2dfa676bb79898bd1a2d7978f64930d0034a0fa771"
+    },
+    {
+      "path": "common/vivado/13_validate.tcl",
+      "bytes": 754,
+      "sha256": "b4b60e90db0ce27f3c29c19c1353c890c6cde04f4eb307357db44cf6fef8fb78"
+    },
+    {
+      "path": "common/vivado/14_synth.tcl",
+      "bytes": 605,
+      "sha256": "03758df7a5b1c73bae5d3adb2c361ae250d6c34f597c96f8977655fa9717dc8b"
+    },
+    {
+      "path": "common/vivado/15_impl.tcl",
+      "bytes": 1010,
+      "sha256": "b3a722ba153e572c4035854970ba031769375f134e5e04638a1895be574e40f4"
+    },
+    {
+      "path": "common/vivado/16_bitstream.tcl",
+      "bytes": 398,
+      "sha256": "e12b3f4ea59e51e67f7025a8911768905622229d7b572f7d911a1e8e6e90828d"
+    },
+    {
+      "path": "common/vivado/17_export_xsa.tcl",
+      "bytes": 412,
+      "sha256": "7e4c75bdcaa465ea15f5f8022e660e74ed9e47b036dffba7c96dff201a111d18"
+    },
+    {
+      "path": "common/vivado/common.tcl",
+      "bytes": 2621,
+      "sha256": "8f8e8ff8bf3009e0dfb9f8a450876d0d2165adbaa56858de01b7f32469b3e339"
+    },
+    {
+      "path": "common/vivado/create_gpr_v3_hier.tcl",
+      "bytes": 8163,
+      "sha256": "a2383ca9dfd938c822fcacc3a49695d73a92e6f83d9bb3815e07e9f0d69ee3c5"
+    },
+    {
+      "path": "common/vivado/create_zcu208_gpr_shell.tcl",
+      "bytes": 659,
+      "sha256": "b9f08b8fd292b42d1d716c4f56bfaab538e0dc590220340c73e00c0fc2fb70ec"
+    },
+    {
+      "path": "config/zcu208_gpr_bd_map.tcl",
+      "bytes": 3302,
+      "sha256": "b9d521c3d1190e8bf68db8b5b620a7b70ed1c45270ad12ac49b073092bf602a8"
+    },
+    {
+      "path": "config.mk",
+      "bytes": 1140,
+      "sha256": "62c5b7e50b068cb929d1d17c01a4aef8a6598713db5778ea97c545af0d93d627"
+    },
+    {
+      "path": "docs/GPR_SFCW_Engineering_Design_Book_RFSoC48DR_v1.4_full_software_offline.docx",
+      "bytes": 22320919,
+      "sha256": "903606c1c8d0663f6cdd2b5e6bf7e639517c179ee88888f1f23a4e224d822598"
+    },
+    {
+      "path": "docs/HYBRID_V3_HARDWARE_ADDENDUM.md",
+      "bytes": 909,
+      "sha256": "cee152ef677fd75e9eb6b69d4fd9581b62f3cd743c0fecfbd10bde5c907c14c2"
+    },
+    {
+      "path": "docs/build-stages.mmd",
+      "bytes": 492,
+      "sha256": "9eb4a1ece4e23ae65e6482e01c9fca91c07554e4f0158f7b47d18a8a19da24e6"
+    },
+    {
+      "path": "docs/diagrams/zcu208-gpr-v3.svg",
+      "bytes": 5060,
+      "sha256": "de760fc3fb61ab0d9b61ac20ccfe5741b497f23be0fa9fdb9dc7ab13f8b65621"
+    },
+    {
+      "path": "hil/matlab/generate_gpr_hil_vectors.m",
+      "bytes": 1761,
+      "sha256": "0ffc71fe30fd657629b6bd81dc4d69c2189cf457b982f910520d0fbe453cd44e"
+    },
+    {
+      "path": "hil/matlab/generate_gpr_hybrid_v3_plan.m",
+      "bytes": 942,
+      "sha256": "566db41719a7fdb4023131e12ed8b955d4655c4e5015da3862bbeff3d00a0da0"
+    },
+    {
+      "path": "hil/matlab/run_gpr_reference.m",
+      "bytes": 521,
+      "sha256": "0f6ca0ffaeb0b88003d4a89077d2df5016313dce3f5f79211d735921bb884545"
+    },
+    {
+      "path": "ip/custom/gpr_background_ewma/Makefile",
+      "bytes": 476,
+      "sha256": "1f7678306d8b2279f9dbd044b54814e6bd9a930bee278d1f6245d0f94e9cdcbf"
+    },
+    {
+      "path": "ip/custom/gpr_background_ewma/README.md",
+      "bytes": 82,
+      "sha256": "a0db17d7169cd3c60c078c0249a40500336d8c31580204e60dc854cf7137a3d6"
+    },
+    {
+      "path": "ip/custom/gpr_background_ewma/build_hls.tcl",
+      "bytes": 638,
+      "sha256": "307122d9ef0096415159841c2bd33650e1a22e94ca97aaebef73eab38a504f3f"
+    },
+    {
+      "path": "ip/custom/gpr_background_ewma/src/gpr_background_ewma.cpp",
+      "bytes": 1623,
+      "sha256": "6f7472e5a27e06a96a825712a9b1819f155ace8105eef8bc20662ce7a56f4d6e"
+    },
+    {
+      "path": "ip/custom/gpr_background_ewma/src/gpr_background_ewma.hpp",
+      "bytes": 438,
+      "sha256": "4399bbc5b13b67723d57b80d1aaaa582752e29d1ae780233d103271c4ba8fb73"
+    },
+    {
+      "path": "ip/custom/gpr_background_ewma/tb/gpr_background_ewma_tb.cpp",
+      "bytes": 575,
+      "sha256": "749493dfa74379af87e6d8918a78fbc28cd3f1e1e10c925b4676973f2be71f9f"
+    },
+    {
+      "path": "ip/custom/gpr_background_median_accel/Makefile",
+      "bytes": 500,
+      "sha256": "97a7816ab069ce46399d9e2181e2cfd86063fc6964eec0289c34980560762cfe"
+    },
+    {
+      "path": "ip/custom/gpr_background_median_accel/README.md",
+      "bytes": 70,
+      "sha256": "ecea0e1ab14c8ab7c0aaed540dd3f20e78624981878db59ff4f1bd40ec539226"
+    },
+    {
+      "path": "ip/custom/gpr_background_median_accel/build_hls.tcl",
+      "bytes": 671,
+      "sha256": "d3d95d327c30bb899f437b7c3f81e9dfd6da2aaa77022ec3e689f56fca18c90f"
+    },
+    {
+      "path": "ip/custom/gpr_background_median_accel/src/gpr_background_median_accel.cpp",
+      "bytes": 1317,
+      "sha256": "0d21d56ee021dd57fd5392e5d234e67a79f2e8600d7649bd43d18bc28abb20b6"
+    },
+    {
+      "path": "ip/custom/gpr_background_median_accel/src/gpr_background_median_accel.hpp",
+      "bytes": 131,
+      "sha256": "c10627bf3cd8809cf260f66ec4ba4d90d4c6d68aa79a0a91ac0afd09e8910541"
+    },
+    {
+      "path": "ip/custom/gpr_background_median_accel/tb/gpr_background_median_accel_tb.cpp",
+      "bytes": 430,
+      "sha256": "60850d03fa4f6f4b8bc6bf036c6cbad6503e4bc206ce9b696b857d107d67d4b2"
+    },
+    {
+      "path": "ip/custom/gpr_cal_window/Makefile",
+      "bytes": 461,
+      "sha256": "3e2ad52ad1f491a4a934abbbdb92e0b780253874dbe2efbf9f7a75e9f869de20"
+    },
+    {
+      "path": "ip/custom/gpr_cal_window/README.md",
+      "bytes": 95,
+      "sha256": "6f43f8fb220d8fcce8ee6142c6e28af1aa6a9a5c954cf40999d078f679161350"
+    },
+    {
+      "path": "ip/custom/gpr_cal_window/build_hls.tcl",
+      "bytes": 631,
+      "sha256": "c5562d2414f825121f286aa1d2bb7c632d21bd172a8da0ee1371bc14732fb812"
+    },
+    {
+      "path": "ip/custom/gpr_cal_window/src/gpr_cal_window.cpp",
+      "bytes": 1056,
+      "sha256": "36d63619d113cdd3dce290178e10a082f329d6a009cf29b61a83eecabcad3446"
+    },
+    {
+      "path": "ip/custom/gpr_cal_window/src/gpr_cal_window.hpp",
+      "bytes": 399,
+      "sha256": "55feadc657e4a60be9efea1d211dab1c6da351ba458e20bd6718ab9d412b6c24"
+    },
+    {
+      "path": "ip/custom/gpr_cal_window/tb/gpr_cal_window_tb.cpp",
+      "bytes": 729,
+      "sha256": "863a5b29147d51f7e8aa989e6ba9e8747a8ec76f795fd7b6b014fd0fe57cc3f3"
+    },
+    {
+      "path": "ip/custom/gpr_cfar1d/Makefile",
+      "bytes": 449,
+      "sha256": "3ad549c2ba5e8b2cad34c5252933776e4e68d53e411d5d242f3199c214bb294a"
+    },
+    {
+      "path": "ip/custom/gpr_cfar1d/README.md",
+      "bytes": 75,
+      "sha256": "200f169d57ccc3a51edb559ca720f00ea756fb5a3e5bf2e04f1e5cbdcfedc88b"
+    },
+    {
+      "path": "ip/custom/gpr_cfar1d/build_hls.tcl",
+      "bytes": 595,
+      "sha256": "2c47d97d5ddd9dfe5e734fa69dc88564d3347aa0492d867f21c7411f899dc764"
+    },
+    {
+      "path": "ip/custom/gpr_cfar1d/src/gpr_cfar1d.cpp",
+      "bytes": 1820,
+      "sha256": "bc19e00294fe97c80206794719b6e4cbcaeccf88c041f965c6d2ed04e7ef1e7c"
+    },
+    {
+      "path": "ip/custom/gpr_cfar1d/src/gpr_cfar1d.hpp",
+      "bytes": 352,
+      "sha256": "c4e8f644486137ac1fb69032f44d43b19f2ca6868a6da28617185bc8591a3c37"
+    },
+    {
+      "path": "ip/custom/gpr_cfar1d/tb/gpr_cfar1d_tb.cpp",
+      "bytes": 412,
+      "sha256": "90ff1cefad96236fa469f209a7db334765b23d1678eea0fbd7d4b9229afa779b"
+    },
+    {
+      "path": "ip/custom/gpr_cfar2d_accel/Makefile",
+      "bytes": 467,
+      "sha256": "493ad95bb35baed18de91253d875b0e9e8e974451b0db1d37ca22a43543ff911"
+    },
+    {
+      "path": "ip/custom/gpr_cfar2d_accel/README.md",
+      "bytes": 84,
+      "sha256": "52a16c702a532c0fcd974c081d4bd6c8737bb7303985baaaa7bc9929d04bf8a2"
+    },
+    {
+      "path": "ip/custom/gpr_cfar2d_accel/build_hls.tcl",
+      "bytes": 628,
+      "sha256": "99e8bc0207ad327b8e754780e4f37719ee694358f6ad843858e67c167719ef76"
+    },
+    {
+      "path": "ip/custom/gpr_cfar2d_accel/src/gpr_cfar2d_accel.cpp",
+      "bytes": 1573,
+      "sha256": "eb7c9a73a43bf6936d2b0afa44fd3c632642fcdd3a798ada787ccd789abef049"
+    },
+    {
+      "path": "ip/custom/gpr_cfar2d_accel/src/gpr_cfar2d_accel.hpp",
+      "bytes": 170,
+      "sha256": "a0d8d05717069e72e70cbed1f892c82a840436ec5bc9a611b7c6bbdad503154c"
+    },
+    {
+      "path": "ip/custom/gpr_cfar2d_accel/tb/gpr_cfar2d_accel_tb.cpp",
+      "bytes": 292,
+      "sha256": "8d9aa1238d3650a17c634033bf826e01a58c129c114d38118e6a046d75f8d25e"
+    },
+    {
+      "path": "ip/custom/gpr_cluster2d_accel/Makefile",
+      "bytes": 476,
+      "sha256": "93341550dc8e7a1575ab24a96ea996da52b0210ed89aee993b0f1cd649038cf8"
+    },
+    {
+      "path": "ip/custom/gpr_cluster2d_accel/README.md",
+      "bytes": 74,
+      "sha256": "5f1d5f5305c4b8887c421130296350a2b1fad0fe6e775bb28504332089d609d0"
+    },
+    {
+      "path": "ip/custom/gpr_cluster2d_accel/build_hls.tcl",
+      "bytes": 643,
+      "sha256": "62b93101146efe9850f2293d9f7b155eed98cd4fb709b50040c1daa1a0d860a6"
+    },
+    {
+      "path": "ip/custom/gpr_cluster2d_accel/src/gpr_cluster2d_accel.cpp",
+      "bytes": 2278,
+      "sha256": "9584e68e3126ef65ac3e99891632e9c59a47a9bc197f6a4af728a48b07836ac6"
+    },
+    {
+      "path": "ip/custom/gpr_cluster2d_accel/src/gpr_cluster2d_accel.hpp",
+      "bytes": 190,
+      "sha256": "715de643d9372d08b5f9725ca308fdd93c1bd0b1a3a4c08f51513bd164d00654"
+    },
+    {
+      "path": "ip/custom/gpr_cluster2d_accel/tb/gpr_cluster2d_accel_tb.cpp",
+      "bytes": 379,
+      "sha256": "8a32964b55a7e79ae5fc8b14dea0d82718b019f0f546527377563dc046c8af8c"
+    },
+    {
+      "path": "ip/custom/gpr_kirchhoff_coherent_accel/Makefile",
+      "bytes": 503,
+      "sha256": "d6f47f340c3edca2b38730f4fe58100bfd83eed0f6ee945a159d1bf870cdac6c"
+    },
+    {
+      "path": "ip/custom/gpr_kirchhoff_coherent_accel/README.md",
+      "bytes": 77,
+      "sha256": "0fe8350fa17c72ca136acafafe97b2a70f2df0bf8627c9f606d6a76558e7b267"
+    },
+    {
+      "path": "ip/custom/gpr_kirchhoff_coherent_accel/build_hls.tcl",
+      "bytes": 682,
+      "sha256": "32b2c365a70024506a76c022f32e14e43edb7f327d6a8ab3e8f61964c4154d2f"
+    },
+    {
+      "path": "ip/custom/gpr_kirchhoff_coherent_accel/src/gpr_kirchhoff_coherent_accel.cpp",
+      "bytes": 1959,
+      "sha256": "022dcb633d03611a94fbda26abff7d42a2de5c00d9bfc0107bd5107e943ea1f9"
+    },
+    {
+      "path": "ip/custom/gpr_kirchhoff_coherent_accel/src/gpr_kirchhoff_coherent_accel.hpp",
+      "bytes": 269,
+      "sha256": "e0af1a62424cfcd19750e468c9817f9852a4e1f15c34f0ec962d308adc1ebbc7"
+    },
+    {
+      "path": "ip/custom/gpr_kirchhoff_coherent_accel/tb/gpr_kirchhoff_coherent_accel_tb.cpp",
+      "bytes": 421,
+      "sha256": "bd81f1a5806c2ec4d0c77e19a281a116932fc5e9cb104b1def0b1127a8ddaf3b"
+    },
+    {
+      "path": "ip/custom/gpr_power32/Makefile",
+      "bytes": 452,
+      "sha256": "f0ecfdd72990da586d18dc1d8dfa4fbcadadc6bb764c5f550d90cd7f3073fe4a"
+    },
+    {
+      "path": "ip/custom/gpr_power32/README.md",
+      "bytes": 81,
+      "sha256": "50cf454c815c12b611275883e155d6d751ca076e44e590cb59a949b073829c71"
+    },
+    {
+      "path": "ip/custom/gpr_power32/build_hls.tcl",
+      "bytes": 605,
+      "sha256": "373ce872317d8e48b30d10ab4efa8afb87e07bddb8c299141baa2df094be5173"
+    },
+    {
+      "path": "ip/custom/gpr_power32/src/gpr_power32.cpp",
+      "bytes": 631,
+      "sha256": "bab13ddda96ad9337bca6b4b4a89672d84820fcb7d38a89471036f55afd53e01"
+    },
+    {
+      "path": "ip/custom/gpr_power32/src/gpr_power32.hpp",
+      "bytes": 380,
+      "sha256": "1d778c7ff6dfc53adc4d8fec8b8904202b8efd614cf62eb2ee079ec7c125dee6"
+    },
+    {
+      "path": "ip/custom/gpr_power32/tb/gpr_power32_tb.cpp",
+      "bytes": 396,
+      "sha256": "53640445bf727e9b718f30b6ad9d6f5fd8a1929836f372055c28fb3ee9eed50a"
+    },
+    {
+      "path": "ip/custom/gpr_rx_tone_extractor/Makefile",
+      "bytes": 482,
+      "sha256": "43e0fab207b1144e08255b9f3260839945cea67454c0ce1244ed8e7af4382a53"
+    },
+    {
+      "path": "ip/custom/gpr_rx_tone_extractor/README.md",
+      "bytes": 81,
+      "sha256": "7b644861b8949cdc25c9cb7a2935145c22c3d81460821954c19be714cf8bd1e3"
+    },
+    {
+      "path": "ip/custom/gpr_rx_tone_extractor/build_hls.tcl",
+      "bytes": 658,
+      "sha256": "e9a83162521aaab8209529fbafa3e7bb93edcf350dd03d2932fbbaba071bf2d2"
+    },
+    {
+      "path": "ip/custom/gpr_rx_tone_extractor/src/gpr_rx_tone_extractor.cpp",
+      "bytes": 9380,
+      "sha256": "8e7da33ffcab58c7857e0abf2e09541ca419a19e82073757a3d3b573d338397c"
+    },
+    {
+      "path": "ip/custom/gpr_rx_tone_extractor/src/gpr_rx_tone_extractor.hpp",
+      "bytes": 536,
+      "sha256": "d66f1c26c74ef3a2cc981fcc483a308f0df65b8693664faad9b2d64391c2caae"
+    },
+    {
+      "path": "ip/custom/gpr_rx_tone_extractor/tb/gpr_rx_tone_extractor_tb.cpp",
+      "bytes": 1034,
+      "sha256": "8800722d64f037198ab7654a745bed0c6a3ca3c1488ba7a9538296041f7ceb31"
+    },
+    {
+      "path": "ip/custom/gpr_sweep_average/Makefile",
+      "bytes": 470,
+      "sha256": "0898d5434f8a8943d788565ba52ee09b2f411d518e7ce1868edee9167dcb6c4b"
+    },
+    {
+      "path": "ip/custom/gpr_sweep_average/README.md",
+      "bytes": 63,
+      "sha256": "96cd081e5bdf3f2f3958404d8071ff59013901dff420dfbdfba53bd45adb9f27"
+    },
+    {
+      "path": "ip/custom/gpr_sweep_average/build_hls.tcl",
+      "bytes": 624,
+      "sha256": "c5243e10920adb9633e2f7f92379e60dc7383523e4749ac47a2a9a67a52c7dcc"
+    },
+    {
+      "path": "ip/custom/gpr_sweep_average/src/gpr_sweep_average.cpp",
+      "bytes": 1159,
+      "sha256": "b57e5d53b71f14f41acf5aa1d8d6c4dd89ee3c6354ba8fc893f029039eb2f7ff"
+    },
+    {
+      "path": "ip/custom/gpr_sweep_average/src/gpr_sweep_average.hpp",
+      "bytes": 469,
+      "sha256": "d51a9855ca89142f5253501948e3e62496154aae60740708dca605b6caeeafe6"
+    },
+    {
+      "path": "ip/custom/gpr_sweep_average/tb/gpr_sweep_average_tb.cpp",
+      "bytes": 542,
+      "sha256": "7eab8becca45a9300c7cb5afad69e652ea3eb97319f9fea853b22dfcd1390071"
+    },
+    {
+      "path": "ip/custom/gpr_sweep_scheduler/Makefile",
+      "bytes": 476,
+      "sha256": "58de84e299db964a445710b3d40fce92efe7a80b7f976382d14e89255cb9c0ff"
+    },
+    {
+      "path": "ip/custom/gpr_sweep_scheduler/README.md",
+      "bytes": 81,
+      "sha256": "92395aefe4ebd3cc75a672ed18620fecc527158910793d52b9745bb057618eb4"
+    },
+    {
+      "path": "ip/custom/gpr_sweep_scheduler/build_hls.tcl",
+      "bytes": 650,
+      "sha256": "37b0ce296805e7ebf580bc52520b8326cd93d9f30f9cad6b67458f7ab9288306"
+    },
+    {
+      "path": "ip/custom/gpr_sweep_scheduler/src/gpr_sweep_scheduler.cpp",
+      "bytes": 11550,
+      "sha256": "425da6a476870f53cfccc1b228cda8ded2ec7471676c3041a501ee003b1a7a2d"
+    },
+    {
+      "path": "ip/custom/gpr_sweep_scheduler/src/gpr_sweep_scheduler.hpp",
+      "bytes": 850,
+      "sha256": "1e28a6e4b4c7fb8478d046c250ab4d60785d786a0d0bebc155440e2d9a77ac13"
+    },
+    {
+      "path": "ip/custom/gpr_sweep_scheduler/tb/gpr_sweep_scheduler_tb.cpp",
+      "bytes": 611,
+      "sha256": "9529d022e03105388c4a840f3b599b878ead8ed5b040f716294d1dc80a1ddd9d"
+    },
+    {
+      "path": "ip/custom/gpr_zero_pad_cfg/Makefile",
+      "bytes": 467,
+      "sha256": "70a045c6d45a6a54fa61cbe58cb07ceb8ba16556d930d1e3d8e3218d3ac54c24"
+    },
+    {
+      "path": "ip/custom/gpr_zero_pad_cfg/README.md",
+      "bytes": 84,
+      "sha256": "9685dd97710a1f4a146828be1514d8bad52df51b158fe684986948376383af98"
+    },
+    {
+      "path": "ip/custom/gpr_zero_pad_cfg/build_hls.tcl",
+      "bytes": 628,
+      "sha256": "fdc7a625597b3057383d0e3ab394de6029f5200e50686945bdabbb9a769317d2"
+    },
+    {
+      "path": "ip/custom/gpr_zero_pad_cfg/src/gpr_zero_pad_cfg.cpp",
+      "bytes": 1117,
+      "sha256": "9f44fae98c8541506cd6705f88317f81fc0fded66123cf94e58ea4fda5b5a951"
+    },
+    {
+      "path": "ip/custom/gpr_zero_pad_cfg/src/gpr_zero_pad_cfg.hpp",
+      "bytes": 514,
+      "sha256": "ef6b5b7a40fcc045ff678c3801985c5a0e0cc0f7cd22888d9c4cdf113f02b936"
+    },
+    {
+      "path": "ip/custom/gpr_zero_pad_cfg/tb/gpr_zero_pad_cfg_tb.cpp",
+      "bytes": 540,
+      "sha256": "afee18aa860ab7b041fb776d4a5c73da20f941c695f3e817eec11e262f206b83"
+    },
+    {
+      "path": "run_offline_cli.sh",
+      "bytes": 398,
+      "sha256": "85e08b3fce3702f67d0a0e2ae3f195bb88f0b9b626f0022348bf9e98635d208e"
+    },
+    {
+      "path": "run_offline_demo.sh",
+      "bytes": 123,
+      "sha256": "ade76161827109c5aae8d83bdc24e0fbdf137e0acb028e7c32d9ca64897fa0a4"
+    },
+    {
+      "path": "run_offline_gui.sh",
+      "bytes": 340,
+      "sha256": "bfba687e476a78a2cce5940d766b001f067079786e7c098d178863f1ddd73846"
+    },
+    {
+      "path": "scripts/clean_build.sh",
+      "bytes": 184,
+      "sha256": "27c3a3ce7edef5e02890349100960f1e7e6a9c3b9f145cbbef84e7818bcb8f0e"
+    },
+    {
+      "path": "scripts/clean_stage.sh",
+      "bytes": 1452,
+      "sha256": "c4d9b18d76cb58d273431468d6a0d8376167fd43616cec1dc3c2e4ff05336ec9"
+    },
+    {
+      "path": "scripts/collect_ip.sh",
+      "bytes": 720,
+      "sha256": "b480f797cfe5dda2e1cb423c83240e8e7350714726e28a6f9a186a8f129fd1f1"
+    },
+    {
+      "path": "scripts/generate_hil.sh",
+      "bytes": 214,
+      "sha256": "2ebb1a5f29738f943470081ee15525efbba027d08813c14140d36f4d801222e6"
+    },
+    {
+      "path": "scripts/hybrid_model_test.py",
+      "bytes": 1835,
+      "sha256": "a3cab33906fae8c2415b6001ca36b12df870df96727883c48dd3338350dda151"
+    },
+    {
+      "path": "scripts/package_release.sh",
+      "bytes": 592,
+      "sha256": "7146d91cb7c35a79b043c869de9c4436c8d9c9a5f496efdadd35b6697b33132a"
+    },
+    {
+      "path": "scripts/preflight.sh",
+      "bytes": 1592,
+      "sha256": "1c0892607f5f9ebf15ed280916fcfd33c6c350436efb6c48669526e4adee4696"
+    },
+    {
+      "path": "scripts/run_stage.sh",
+      "bytes": 1144,
+      "sha256": "13b1d572fad5b6c6a43204e5c9bc09468d26597d5a0f0cc5f641fa06de5aa96a"
+    },
+    {
+      "path": "scripts/stage_status.sh",
+      "bytes": 224,
+      "sha256": "cf550f7381f1e79bba11c8f176ae4e18f0b5e604ad40ec127876842af6d4dd0d"
+    },
+    {
+      "path": "scripts/static_validate.sh",
+      "bytes": 2309,
+      "sha256": "874112ad14ffca01890d7e363176319cb48b5d1ab11315e0cda6993dbd5c078f"
+    },
+    {
+      "path": "setup_offline.sh",
+      "bytes": 125,
+      "sha256": "11dd30e56322c6227ca6998b23f5e1292b9c84835171c0e26ac51a4d1a40a6b2"
+    },
+    {
+      "path": "software/offline/README.md",
+      "bytes": 2582,
+      "sha256": "b13c5f7e22f1b1f28508f1f730af44b1334f36644a6eaa93e9c2d098024ea1cf"
+    },
+    {
+      "path": "software/offline/configs/antenna_profiles.yaml",
+      "bytes": 525,
+      "sha256": "47561fde96b11c22bc49b9a48dd1185b54085d191e163f276b11f709d76e5651"
+    },
+    {
+      "path": "software/offline/configs/classification_profiles.yaml",
+      "bytes": 418,
+      "sha256": "27fd7af31f89e1c2dab0cbfa1c2b94d759af6429eb8cf240ffac5e8403abe9fc"
+    },
+    {
+      "path": "software/offline/configs/demo_synthetic.yaml",
+      "bytes": 794,
+      "sha256": "e8275e7372481facca8cda96c91bfe2c2b49b8d4568bb0a8fec9e9308fa5e9c2"
+    },
+    {
+      "path": "software/offline/configs/detection_profiles.yaml",
+      "bytes": 309,
+      "sha256": "d2dc53dc655a366848b5bcee0d6e59ad3993a6d8fba8726d7617a08d4419ed6d"
+    },
+    {
+      "path": "software/offline/configs/mode_a_uav_shallow.yaml",
+      "bytes": 915,
+      "sha256": "23636c3d08ce526eae5ed2af20b81185f1f0a287e32e5f1b383ef7337050151d"
+    },
+    {
+      "path": "software/offline/configs/mode_b_ground_deep.yaml",
+      "bytes": 673,
+      "sha256": "1fb275191b5d615e2efef26f09a92a3da0ac130d1ff763c447dee8468832677a"
+    },
+    {
+      "path": "software/offline/configs/rfsoc_profiles.yaml",
+      "bytes": 526,
+      "sha256": "ebe29037700c4959ce984b3c24bceb4d3fb7ae563e67a4e4110d075c5c9611af"
+    },
+    {
+      "path": "software/offline/configs/soil_profiles.yaml",
+      "bytes": 387,
+      "sha256": "577577cc183b128ef7a0715b6297e3d021a5e0ac25f588ae05a51883416285c5"
+    },
+    {
+      "path": "software/offline/configs/visualization_profiles.yaml",
+      "bytes": 256,
+      "sha256": "0449324488c9377dece02e11a479d5712b9b2b387cb5f1b3f1e358cd155c99e7"
+    },
+    {
+      "path": "software/offline/configs/waveform_profiles.yaml",
+      "bytes": 456,
+      "sha256": "82d38784421f40646085128390ca43ec8d53f6a2be7409d9071336822833bbd2"
+    },
+    {
+      "path": "software/offline/docs/RFSOC_DATA_PROTOCOL.md",
+      "bytes": 272,
+      "sha256": "a344233abc540181d0fd52a7bd08332f5b3d0135862340ef6e57fa5b9d4b50b1"
+    },
+    {
+      "path": "software/offline/docs/SOFTWARE_ARCHITECTURE.md",
+      "bytes": 318,
+      "sha256": "b7e3be963e60155185211129b89d40548dd12e6767222be390b5585004dfbc16"
+    },
+    {
+      "path": "software/offline/examples/generate_demo_capture.py",
+      "bytes": 758,
+      "sha256": "bd2883c5918785401c63c68944e1471ed7043118de131858e96906a1878bd6aa"
+    },
+    {
+      "path": "software/offline/examples/generate_demo_volume_lines.py",
+      "bytes": 984,
+      "sha256": "877c8d151de13b253c183ee7e36fadbebd5c0c84be28b6bc338dbf2853468f60"
+    },
+    {
+      "path": "software/offline/examples/train_material_classifier_example.py",
+      "bytes": 254,
+      "sha256": "45ca7b568e9cd5565658833786271820ff69dbea670689d0761e6057e4073916"
+    },
+    {
+      "path": "software/offline/gpr_workstation/__init__.py",
+      "bytes": 133,
+      "sha256": "653be40a9010a65873cab3eafa8702a847cca682f272748a90eb2f82f75d212a"
+    },
+    {
+      "path": "software/offline/gpr_workstation/background.py",
+      "bytes": 1000,
+      "sha256": "0cdfad7e84a2187fa1bbfea6fbe80bb087b0c41241cf60100a0b28f2a8ea0e92"
+    },
+    {
+      "path": "software/offline/gpr_workstation/classification.py",
+      "bytes": 2114,
+      "sha256": "1bf29c7e3d6a43f889ff40b3eee79ef702cee720b9d51a1b003a260048c8c3ce"
+    },
+    {
+      "path": "software/offline/gpr_workstation/cli.py",
+      "bytes": 1040,
+      "sha256": "aa89d9ad4d9a703107d22f41479d28fd57561a041fdda032e78c01b3311e0263"
+    },
+    {
+      "path": "software/offline/gpr_workstation/config.py",
+      "bytes": 3725,
+      "sha256": "aeaa306669d8952438733bbca20fbb04be1a812c00265f91057105edefabf911"
+    },
+    {
+      "path": "software/offline/gpr_workstation/detection.py",
+      "bytes": 1366,
+      "sha256": "619e63725712efe44727d4925b0d08f8177cbc5ce089bf28743c6e62115555d9"
+    },
+    {
+      "path": "software/offline/gpr_workstation/doctor.py",
+      "bytes": 868,
+      "sha256": "d2b274e882cf729edbbf16353a76ab04067a7d572c4c9130084ceba52f584f02"
+    },
+    {
+      "path": "software/offline/gpr_workstation/export.py",
+      "bytes": 5481,
+      "sha256": "9696614b053fc0d4e7986f05800aa6039418cc2e249f07334d2b115a89c61959"
+    },
+    {
+      "path": "software/offline/gpr_workstation/features.py",
+      "bytes": 845,
+      "sha256": "3a3b806ae249e22441f7f227d29bf079d2a3da65c489497715bc3c387622893a"
+    },
+    {
+      "path": "software/offline/gpr_workstation/gui.py",
+      "bytes": 4240,
+      "sha256": "e8c22192ecf16cf197793fbae37173888bb4dfe0904abc127133de49639835e9"
+    },
+    {
+      "path": "software/offline/gpr_workstation/io.py",
+      "bytes": 4452,
+      "sha256": "503021b2269cab6d7b93cc4292ed27ddd8ba7a666de904075e2ac4d1dd38a723"
+    },
+    {
+      "path": "software/offline/gpr_workstation/live_capture.py",
+      "bytes": 1054,
+      "sha256": "61bc803cb1d6485abc4854176069899f471f0e8a766139161d63b1bc9250bee4"
+    },
+    {
+      "path": "software/offline/gpr_workstation/live_udp.py",
+      "bytes": 1338,
+      "sha256": "039520e79b53669cfa9501d178c4f97c819c3dee87dc2bed2ce0d3856c1ab788"
+    },
+    {
+      "path": "software/offline/gpr_workstation/migration.py",
+      "bytes": 598,
+      "sha256": "16cf75f6d163eb81f538ef2f8c457cf4e126d0a8225477856cae98aa449cec53"
+    },
+    {
+      "path": "software/offline/gpr_workstation/models.py",
+      "bytes": 847,
+      "sha256": "a67bbcd2c0a6c9f41ebd6946a13e381808f234839659a14a23c9e06cab7a43d0"
+    },
+    {
+      "path": "software/offline/gpr_workstation/pipeline.py",
+      "bytes": 3306,
+      "sha256": "132d6b278b32d013e708ca08daa2752f4e9ca4ee331b84611d81e9d8cdd0df22"
+    },
+    {
+      "path": "software/offline/gpr_workstation/report.py",
+      "bytes": 1138,
+      "sha256": "298688ef37ae542e8db5898312990109b334ef87a0d7c49f2c990ae345745db7"
+    },
+    {
+      "path": "software/offline/gpr_workstation/signal.py",
+      "bytes": 1165,
+      "sha256": "8532058b928750ed16ac9d7608a5a362ec122852db623f256b58abfc8800cba9"
+    },
+    {
+      "path": "software/offline/gpr_workstation/visualization.py",
+      "bytes": 1095,
+      "sha256": "3dc2060d09db9624dba902a764f9df7a79c62bf472aabf356fa8d132b3172dea"
+    },
+    {
+      "path": "software/offline/gpr_workstation/volume.py",
+      "bytes": 403,
+      "sha256": "4ed9d13b73c1d8bbc2ce55d9c679f24b4d32cf2d63688f5ff4796467dc6d315f"
+    },
+    {
+      "path": "software/offline/gpr_workstation/volume_cli.py",
+      "bytes": 2752,
+      "sha256": "9789369f0b4d1ef8a335b6e5e0ae2585b12e50ba48138e16522e81edb09cea86"
+    },
+    {
+      "path": "software/offline/requirements-core.txt",
+      "bytes": 52,
+      "sha256": "0baecde716a792c7e373bee8ed6fefe1576b4eb334d7534c411e8909d97113e4"
+    },
+    {
+      "path": "software/offline/requirements-optional.txt",
+      "bytes": 52,
+      "sha256": "a5eccd451cd29d5195a1acfa4006e1ab221f0b35cd46e302dca449a73e32bbb4"
+    },
+    {
+      "path": "software/offline/requirements.txt",
+      "bytes": 54,
+      "sha256": "4fce6c16f8e45cc2250d85726bd4e560839ddd52f0535cf76225ee66693be0b4"
+    },
+    {
+      "path": "software/offline/run_cli.sh",
+      "bytes": 406,
+      "sha256": "f90d69957d403d15cecf2cb0160298f40578e4198dec3fdfdbbebcdd78f2bac4"
+    },
+    {
+      "path": "software/offline/run_demo.sh",
+      "bytes": 492,
+      "sha256": "f883b039da2707e36d2d5ea4497b604cbd80d276d497e3942a6dcac792b0cefd"
+    },
+    {
+      "path": "software/offline/run_gui.sh",
+      "bytes": 406,
+      "sha256": "f2719c35b09663d157091589bec5551c650c0f3112a58464f500f3df924a170b"
+    },
+    {
+      "path": "software/offline/setup_venv.sh",
+      "bytes": 1080,
+      "sha256": "014f90f26a39601986abaab0ff9906019f6197e2a4f6b3d791df0a1cb65fd065"
+    },
+    {
+      "path": "software/offline/tests/test_io.py",
+      "bytes": 407,
+      "sha256": "e3ce3ecb7b43b507f53077674582691be40dc6d6227e5dd97c9acb8dc8901fb3"
+    },
+    {
+      "path": "software/offline/tests/test_optional_deps.py",
+      "bytes": 2323,
+      "sha256": "e132ac5acfc4121dc009d0f1423d689652829b638d26acf1702d61328d33622f"
+    },
+    {
+      "path": "software/offline/tests/test_pipeline.py",
+      "bytes": 802,
+      "sha256": "7e507a87bbbd92a744a429539e0d090e2a6e7d96680503adaa79d156f3db7bfc"
+    },
+    {
+      "path": "software/ps/HYBRID_V3_RUNTIME.md",
+      "bytes": 1521,
+      "sha256": "8aaa392d5930da44b78cf4f5f21b8a3ee91536f1abeb0039c30d0b964bb19b0c"
+    },
+    {
+      "path": "software/ps/README.md",
+      "bytes": 749,
+      "sha256": "790c9274bc935041d0d3ffa2ca28a388c999e315c1b154f60fa500673c0f7a85"
+    },
+    {
+      "path": "software/ps/gpr_rfsoc_runtime.c",
+      "bytes": 1629,
+      "sha256": "0f4f4131822d7946f237fbb6b21dd57b1bc815aff4297f356c52ce8bcfbe7d71"
+    },
+    {
+      "path": "software/ps/gpr_rfsoc_runtime_v3.c",
+      "bytes": 1929,
+      "sha256": "393f367644771e93bf5db0afda9cbfe5f0ed93b554422fdb79901056f5418213"
+    },
+    {
+      "path": "software/ps/gpr_subband_plan.py",
+      "bytes": 1390,
+      "sha256": "033259135613403d653dd751e7afb24edcce4c89335af38c862754a9f7799737"
+    }
+  ]
+}
