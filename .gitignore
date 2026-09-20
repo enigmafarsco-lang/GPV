@@ -13,3 +13,7 @@ reports/
 *.log
 *.str
 vivado*.backup.*
+
+# Python artifacts
+__pycache__/
+*.pyc

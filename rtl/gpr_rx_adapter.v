@@ -13,11 +13,15 @@
 //      dwell_cyc / N_TONES / n_avg_m1 counting, exactly mirroring the TX
 //      sequencer in gpr_dds_txc.
 //   3. RESIDUAL CARRIER: the RFDC fine mixer tunes to the SUB-BAND centre, so
-//      each captured tone sits at a residual IF f_res = f_tone - f_sb.  The
-//      adapter derotates every sample with an NCO (fw_rom[tone] -
-//      sb_center_fw, same 48-bit phase / quarter-wave sine ROM scheme as the
-//      DDS, phase restarted at 0 on every tone = coherent with the TX tone
-//      start), BEFORE dwell integration, so the coherent sum does not cancel.
+//      each captured tone sits at a residual IF f_res = f_tone - f_LO.  The
+//      golden fw_seq ROMs ALREADY contain residual (beat) words - make_golden
+//      bakes fw = (f_tone - LO)/F_CLK * 2^48 - so the derotation NCO word is
+//      fw_rom[tone] - sb_center_fw, where sb_center_fw is a CORRECTION offset
+//      (nominally 0; write delta/F_CLK*2^48 only if the actual mixer centre
+//      deviates from the plan LO by delta).  Same 48-bit phase / quarter-wave
+//      sine ROM scheme as the DDS, phase restarted at 0 on every tone =
+//      coherent with the TX tone start.  Derotation happens BEFORE dwell
+//      integration, so the coherent sum does not cancel.
 //
 // Dwell integration (sum of dwell_cyc derotated samples, 40-bit guard
 // accumulators) and exact dwell normalisation (round-to-nearest divide by
@@ -46,7 +50,7 @@ module gpr_rx_adapter #(
     // configuration (AXI-Lite registers in gpr_top)
     input  wire [31:0] dwell_cyc,            // samples per tone (>=1)
     input  wire [7:0]  n_avg_m1,             // sweeps per position minus 1
-    input  wire [47:0] sb_center_fw,         // RFDC mixer centre, Q0.46 turns
+    input  wire [47:0] sb_center_fw,         // residual correction offset (normally 0), Q0.46 turns
     // RFDC AXI4-Stream slave (no TUSER; tlast ignored)
     input  wire             s_tvalid,
     output wire             s_tready,

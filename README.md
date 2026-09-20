@@ -139,7 +139,7 @@ Q0.32 turns, K_Q24 = 10188014 both directions, 24-entry atan LUT) and
 | 0x54/0x58 | LOG2ALPHA_Q26, GAMMA2_Q26 | log-mode terms (signed) |
 | 0x5C | PFLOOR_K[31:16], PFLOOR_SH[4:0] | p_floor = max·k>>sh |
 | 0x60/0x64 | DR_Q16, DX_Q16 | cluster report scaling |
-| 0x68/0x6C | SB_CENTER_FW lo/hi | RFDC sub-band centre phase word (48-bit, Q0.46) for the RX derotator; PS updates at sub-band retune |
+| 0x68/0x6C | SB_CENTER_FW lo/hi | RX derotation **correction offset** (48-bit, Q0.46), nominally 0: the golden `fw_seq` ROMs already contain residual (beat) words; write Δf/F_CLK·2^48 only if the real mixer centre deviates from the plan LO. PS updates at sub-band retune |
 | 0x80–0x94 | REP1–REP6 | report (below) |
 | 0xA0–0xB4 | CNT_ADC/AVGGRP/RP/BS/MIG/DET | test-point beat counters |
 
@@ -193,12 +193,15 @@ constrain the PL differential pair in `zcu208.xdc`). The bring-up clk_wizard
 lands at ≈245.83 MHz (+0.03 %); if you keep a non-nominal rate permanently,
 regenerate the golden ROMs with the matching `F_CLK` in `make_golden.m`.
 
-**RFDC data alignment:** the RFDC fine mixer tunes to the *sub-band centre*;
+**RFDC data alignment:** the RFDC fine mixer tunes to the *sub-band centre*
+(plan: `software/ps/gpr_subband_plan.py`, bit-exact against the golden ROMs);
 `gpr_rx_adapter` derotates the residual per-tone IF in the PL
-(`fw_rom[tone] − SB_CENTER_FW`, live register read), integrates the dwell and
-normalises it exactly, so `gpr_avg` sees one baseband beat per tone per sweep.
-The PS only has to keep `SB_CENTER_FW` (0x68/0x6C) in step with the sub-band
-retune loop (`sb_req`/`sb_ack`) — updates land at tone boundaries. The AXI-Lite
+(`fw_rom[tone] − SB_CENTER_FW`, live register read — `fw_rom` already holds
+residual beat words, so `SB_CENTER_FW` is a correction offset, nominally 0),
+integrates the dwell and normalises it exactly, so `gpr_avg` sees one
+baseband beat per tone per sweep. PS duties per retune: program DAC+ADC
+mixers from one table, issue the deterministic mixer update event, then pulse
+`sb_ack` — see `software/ps/BRINGUP_GATES.md`. The AXI-Lite
 slave accepts AW and W phases independently, in either order.
 
 ---
