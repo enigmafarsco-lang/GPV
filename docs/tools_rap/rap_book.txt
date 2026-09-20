@@ -1,0 +1,326 @@
+# Document map and engineering scope
+This book defines the RAP system: an INTEGRATED ACTIVE-PASSIVE COUNTER-SURVEILLANCE RADAR in which a validated stepped-frequency continuous-wave (SFCW) active radar and a passive coherent location (PCL) receiver share one coherent XCZU48DR hardware platform, one clock plant, one PS software runtime and one fusion engine. The active sub-system is inherited frozen from the validated artifact set (GPM v1.8 MATLAB package, GPV RFSoC RTL with 10/10 bit-exact testbenches); the passive sub-system, the fusion layer and the EMCON policy are the new engineering content of this book.
+| Part | Sections | Coverage |
+| I | 2-6 | mission, modes and EMCON, architecture, coherent timing, inherited active baseline |
+| II | 7 | passive sub-system (shared design, also issued standalone as PCL-EDB-002) |
+| III | 8-10 | own-TX interference control, fusion and cueing, PS software architecture |
+| IV | 11-15 | implementation partition, PCB rules, BOM review, integration test, field calibration |
+| V | 16-19 | failure modes, traceability, production variants, frozen baseline and references |
+| App | A-C | extended block explanations, equation collection, glossary |
+Readers coming from the active design book (v1.4) will find boards A-E unchanged; this book adds board C-P (passive RF front end) and the passive PL/PS chain, and it changes only one active-side behaviour: dwells become schedulable grants under the EMCON arbiter.
+## Revision history
+| Rev | Date | Change |
+| 1.0 | 2026-09-20 | First issue; active baseline frozen at GPV ps-runtime / GPM v1.8 |
+## Conventions
+Bullet lists carry requirements and rules; tables carry parameters; monospace lines carry equations; figures are either diagrams or seeded simulations and are labelled as such in the caption. The numbering convention [validated]/[derived]/[budget]/[simulated] is stated on the title page and is enforced throughout.
+
+# System mission and design objectives
+## Counter-surveillance mission statement
+The RAP system protects a defended site against surveillance acts, where a surveillance act is any non-cooperative collection of information about the site: covert emitters reporting what they see, reconnaissance platforms observing from the air or ground, or hostile sensors mapping the site's own emissions. The system must detect the sensor or its emissions, locate it, classify the threat family, cue a response (operator, counter-measure director, or the active radar for fine tracking), and hold track continuity while the threat manoeuvres or goes silent in one sensing domain.
+## Threat classes and observable signatures
+| Class | Example | Observable | Primary sensor | Notes |
+| T1 | covert emitter (bug, camera uplink, exfil radio) | transmission 30 MHz-6 GHz | passive geolocation | invisible to active radar if static and small |
+| T2 | reconnaissance UAV / micro-UAV | control link + small RCS 0.01-0.1 m2 | passive cue, active confirm | RF-silent glide phases require active hold |
+| T3 | passive observation platform (glider, mast, periscope) | small RCS only | active SFCW chain | passive contributes nothing |
+| T4 | hostile radar / mapping sensor | high-power pulsed or FMCW emissions | passive TDOA/FDOA | active must stay silent (EMCON M0) |
+| T5 | intruder with handheld device | intermittent emissions + moving RCS | fused | urban multipath dominates errors |
+## Design objectives and top-level KPIs
+| KPI | Objective | Basis |
+| cue-to-confirm latency | <= 2.5 s | latency budget section 9 |
+| own emission | bounded by EMCON grants, logged | arbiter design |
+| passive ECR | >= 80 dB | cancellation budget |
+| CAF coherence loss | <= 0.5 dB over T_int | clock plant derivation |
+| active chain regression | zero change, 10/10 TBs | inheritance rule |
+| operator evidence | every cue/fix hash-recorded | evidence recorder |
+## Why integration, not federation
+Two boxes on a site can each be excellent and jointly useless: without a common clock plant the passive CAF coherence term becomes a per-box oscillator specification that no commercial receiver meets at 600 MHz over 1 s; without a common arbiter the active box radiates exactly when the passive box is trying to listen silently against T4; without a common fusion state the two pictures disagree in front of the operator. Integration on one XCZU48DR removes all three failure classes by construction, and the RFDC channel count (8 ADCs) is exactly sufficient for the channel set defined in section 7.
+
+# Operating concept: modes, EMCON and timelines
+## Mode set
+| Mode | Active TX | Passive RX | Purpose |
+| M0 FULL SILENCE | off | on | default against T4; zero own emission |
+| M1 PASSIVE CUE | off until cue, then short confirm dwell | on | minimal radiation for confirmation |
+| M2 ACTIVE SEARCH | on, full schedule | on | RF-silent target search (T3) |
+| M3 ACTIVE TRACK | on, track-only waveform | on | minimum revisit, minimum power |
+| M4 CAL | on, calibration schedule | on | passive observes own TX as bistatic reference |
+## EMCON as a schedulable resource
+Every active dwell request carries a cost equal to radiated time times power in the direction of the threat sector; the arbiter grants dwells only against cue confidence, operator command, or calibration need, and logs every grant and denial with its evidence. Radiation is therefore a budget line, not a side effect. The operator can always override in either direction; overrides are logged with the same rigour as grants.
+FIG: fsm_arbiter.png | Arbiter state machine: transitions are driven by cue confidence, association outcomes, operator command and the calibration schedule.
+FIG: emcon_timeline.png | Example mode timeline: radiation exists only inside granted windows; silence is the default state.
+## Operational timelines
+| Step | Budget |
+| passive CAF batch (DVB-T lane) | 1.0 s integration + 0.1 s process |
+| cue to confirm-dwell grant | <= 0.2 s |
+| confirm dwell + report | <= 0.3 s (reduced tone set) |
+| end-to-end cue to fused track | <= 2.5 s |
+| emitter fix (2-node) to operator | <= 1.0 s after second-node TDOA |
+
+# Top-level architecture
+FIG: master_rap.png | Master block diagram: one clock plant, one RFSoC, active and passive chains side by side, fusion and arbiter in PS, operator workstation at the edge.
+## Subsystems and interface control
+1. Active SFCW radar (inherited): DDS tone synthesis, board B TX chain, board E antennas, board C RX front end, RFDC tile 2 channel 224 at 4.9152 GSPS, validated PL chain (IFFT range processing, background removal, migration, CFAR, clustering) and its AXI-Lite map 0x00-0xB4.
+2. Passive PCL receiver (new, section 7): REF x2, SURV x4 (ULA), AUX x1 at 2.4576 GSPS; channeliser, ECA, clutter canceller, CAF, CFAR, DOA in PL; ranking, tracking, geolocation in PS.
+3. Coherent timing unit (board A discipline extended): site 10 MHz reference, one clock generator, RFDC clocks and SYSREF for all tiles, fabric and PS clocks; section 5.
+4. Fusion and cueing engine (PS): association, covariance-intersection fusion, EMCON arbiter, evidence log; section 9.
+5. Operator workstation: displays, mode control, evidence browser, offline replay; section 10 data contract.
+| Interface | From | To | Contract |
+| RF passive antennas | board C-P | RFDC t0/t1 | 50 ohm, matched delays, cal tone injectable |
+| lane streams | RFDC DDC | PL channeliser | 76.8 MS/s complex per lane, AXI-S tdata {I,Q} |
+| detections | PL CFAR/DOA | PS trackers | record list via DDR ring, IRQ per batch |
+| cues and grants | PS fusion | PS arbiter / active runtime | cue FIFO + dwell grant registers |
+| evidence | PS recorder | workstation | integer-only records with SHA-256 hashes |
+FIG: pl_partition.png | Partition rule: per-batch determinism stays in PL; policy and adaptation live in PS where they can be golden-modelled and replayed.
+
+# Coherent timing architecture
+The active chain already requires multi-tile synchronisation; the passive CAF adds a stricter requirement across a much longer window: phase coherence between REF and SURV channels over T_int up to tens of seconds on FM lanes. Because both chains live in one box off one clock generator, this is a plant specification instead of a network problem.
+FIG: clock_tree.png | Clock plant: site 10 MHz reference into one jitter-cleaned generator feeding RFDC sampling clocks, SYSREF for all tiles, fabric and PS clocks.
+EQ: phi_drift = 2 pi f_c T_int sigma_y(1 s) ;  require phi_drift <= pi/36  (5 deg rms)
+At 600 MHz and T_int = 1 s the requirement is sigma_y ~ 1.4e-14, which any GPSDO-disciplined ovenised plant meets with three orders of margin; two free-running boxes would need atomic standards and still fail the distribution path. The derived loss curve in section 7 (phase_drift figure) converts plant quality into CAF gain loss and is the acceptance chart for commissioning.
+Rules:
+- SYSREF alignment is verified at boot by the RFDC MTS status words; a tile that fails alignment halts passive lane start, not merely warns.
+- Holdover behaviour: on loss of the site reference the plant enters holdover; passive long-CPI lanes suspend (their coherence assumption is void) while short-CPI lanes may continue with a degraded flag.
+- The active chain's validated clocking (245.76 MHz family, tile 224 at 4.9152 GSPS) is unchanged; passive rates are integer relatives of the same family.
+
+# Active sub-system: inherited validated baseline
+## Inheritance rule
+Nothing in the active chain is modified by this book except three interface additions: a TX-blanking status output for passive gating, a reduced-tone confirm-dwell parameter set, and frame timestamps traceable to the common clock (already present via the frame cycle). Algorithmic truth remains GPM v1.8 (gpr_pipeline_spec.m, validate_package.m with its 83 checks); hardware truth remains GPV (14 RTL modules, 10/10 testbenches bit-exact against make_golden.m ROMs).
+## Configuration envelopes [validated]
+| Parameter | Mode A (wideband search) | Mode B (focused deep) |
+| RF span | 0.5-3.0 GHz | 10-100 MHz |
+| tones per dwell | 256 | 256 (golden ROMs; config field states 512 - see GPV PROVENANCE) |
+| dwell / positions | 50 us, 200 positions | per configuration |
+| coherent averages | 32 | per configuration |
+| range IFFT | 2048 pt, Kaiser beta 8 | same |
+| CFAR | mean-CFAR Pfa 1e-6, guard 8 train 16 | log-CFAR Pfa 1e-5 |
+| golden results | max_bin 235, band [11,233], 21 subbands, 41 detections | max_bin 302, band [33,300], 1 subband |
+## Block map to validated RTL
+| Active block (v1.4 numbering) | Function | GPV artifact |
+| B02 waveform | stepped-frequency tone table | gpr_dds + subband plan |
+| B06-B09 RX/ADC/avg/cal | acquisition and conditioning | RFDC 224 + PL front end |
+| B10 range processing | Kaiser window, zero-padded IFFT | gpr_fft |
+| B11 background | median clutter estimate | gpr_background |
+| B12 migration | coherent spatial focusing | gpr_migrate + gpr_cordic + gpr_div |
+| B13 detection | adaptive CFAR | gpr_cfar |
+| B14 report | clusters and engineering outputs | gpr_cluster + gpr_regs |
+| scheduler | AXI-S beat discipline, AXI-Lite map | gpr_rx_adapter, gpr_top_zcu208 |
+## What RAP demands from the active chain
+- Confirm dwell: a dwell request with reduced tone count and reduced position set around a cued range/angle cell; this is a parameter set through the existing retune path, not new RTL.
+- TX-blanking status: one AXI status bit plus GPIO mirror, asserted for the RF-on window of every dwell including ramp, so passive batches can gate precisely.
+- Timestamped reports: REP registers plus frame counter already traceable to the fabric clock; the fusion engine converts to common-reference time using the boot-measured offset.
+
+# Passive sub-system (shared design)
+INCLUDE shared_passive.txt
+
+# Own-TX interference control
+In the integrated box the active transmitter is the strongest emitter on site and sits metres from the passive surveillance array. Three layered defences keep the passive lanes usable during active operation.
+1. Blanking gate: the TX-blanking status bit defines dwell windows; CAF batch boundaries are scheduled so that batches overlapping a dwell are discarded or interpolated, and the batch header records the loss so the fusion engine can price the integration loss.
+2. AUX-TX cancellation: the coupled TX copy enters the ECA tap set as an extra reference channel, projecting residual leakage out of kept batches.
+3. Joint frequency planning: the subband plan generator and the passive lane tuner are scheduled together so active tones never fall inside a channelised passive band while M1/M3 is active; conflicts are resolved in favour of the passive lane against T4 threats and in favour of the active chain otherwise, per policy table.
+FIG: timing_blank.png | Blanking timing: CAF batches overlapping active dwells are greyed (discarded/interpolated); AUX taps cover residual leakage inside kept batches.
+FIG: blank_loss.png | Integration loss versus dwell duty priced by the scheduler: 10 percent dwell duty costs about 0.46 dB of CAF gain [derived].
+The scheduler's cost model adds this loss to the cue confidence of affected lanes, so a dwell grant that would blind the lane feeding an active T4 track is denied unless the operator overrides.
+
+# Fusion, cueing and the EMCON arbiter
+## Association and track-to-track fusion
+Passive lane tracks (bistatic coordinates plus DOA) and emitter fixes are converted to site Cartesian with their covariances and gated against active tracks by Mahalanobis distance; attribute likelihood (Doppler agreement between passive f_d and active radial velocity, class agreement) multiplies the gate acceptance. Fusion uses covariance intersection rather than a centralised filter: the two chains keep independent noise models, and CI guarantees a conservative fused covariance even when cross-correlation is unknown.
+FIG: assoc_gate.png | Kinematic gating: unassociated cues outside the gate ellipse are rejected before association.
+FIG: fusion_ci.png | Covariance intersection: fused covariance is conservative against both parent covariances.
+FIG: tracker_truth.png | Simulated cue-confirm-fuse scenario: passive track from t=0, active confirms after cue at t=18 s, fused track holds through an RF-silent glide.
+## Cueing rules
+| Cue source | Condition | Arbiter action |
+| passive emitter fix (T1/T4) | class in {bug, uplink, hostile radar}, SNR above thr | hold M0; report; T4 keeps active silent |
+| passive bistatic track (T2) | age >= 3 updates, no active correlate | M1 confirm dwell at cued cell |
+| active detection, no passive correlate (T3) | CFAR + cluster valid | M3 track; passive sweeps for emissions at track |
+| association gap > T_gap | fused track coasting | re-grant dwell or declare lost per policy |
+## Cue message and evidence
+A cue record carries lane id, bistatic range gate, Doppler, DOA, SNR, class likelihoods, timestamp and the SHA-256 hash of the IQ snippet that produced it; the confirm dwell's report carries the same fields from the active side, and the fused track record references both hashes. The operator evidence browser can replay either snippet offline against the golden model, which is the acceptance test of the whole cueing chain.
+FIG: cue_seq.png | Cue-confirm sequence: CAF batch cue, arbiter grant, confirm dwell, association, fused track, dwell release.
+
+# PS software architecture
+## Task set and scheduling
+FIG: sw_tasks.png | PS task graph: IRQ service for active frames and passive batches, retune service, illuminator ranking, ECA supervision, trackers, fusion, arbiter, evidence recorder.
+The runtime extends the validated skeleton (software/ps/gpr_ps_runtime.c): the existing service loop gains a passive service slice executed on the per-batch interrupt, and all new state machines follow the same discipline - integer-only state, deterministic service order, no dynamic allocation in the IRQ path.
+## Register map extension
+| Offset | Register | Meaning |
+| 0x100 | PASS_CTRL | lane enable mask, batch length code, blanking policy |
+| 0x104 | PASS_STATUS | lane health word (ECR alarm, REF echo alarm, scale sat) |
+| 0x108 | ILLUM_RANK0/1 | ranked lane table (id, score, parameters index) |
+| 0x110+ | LANE_tune[k] | per-lane DDC NCO, gain, filter set index |
+| 0x140 | CAF_CFG | T_int code, batch count, Doppler span, window select |
+| 0x144 | ECR_MON | residual power taps per lane (read-only) |
+| 0x150 | CUE_FIFO | cue record read port (count + pop) |
+| 0x160 | EMCON_POLICY | mode mask, cost weights, operator override latch |
+| 0x170 | EVICT/EVID | evidence recorder control and hash readback |
+IRQ map: bit 0 active rep_done (unchanged), bit 1 passive batch done, bit 2 lane health alarm, bit 3 evidence ring half-full; all W1C like the validated 0x0C register.
+## Data contract to the workstation
+FIG: data_contract.png | Record header: integer-only, self-describing, CRC-terminated - the same discipline that made golden ROM comparison bit-exact in the active package.
+Map pages, cue records, emitter records and evidence records all travel in this framing; the offline replay tool reprocesses any recorded page through the golden model and compares hashes, which is the regression test of the deployed software.
+## Subsections of the software part
+### 10.1 Scope and mapping to blocks
+Every PL block P01-P12 has exactly one PS service responsible for its configuration and one for its health; the active B-blocks keep their validated services untouched. The mapping table is generated from the register map so it cannot drift from the RTL headers.
+### 10.2 Unified live and offline execution
+The same record framing and the same service functions run live on the box and offline on the workstation against recorded rings; offline is not a re-implementation, it is the same code with a different I/O back end. This is the property that makes evidence replay a regression test.
+### 10.3 Configuration system
+Site configuration is a versioned document: lane sets per band, site radio plan occupancy masks, EMCON policy tables, antenna calibration tables, cable calibration tables. A configuration change produces a new version id that rides in every record header, so any archived page can be reprocessed with exactly its own configuration.
+### 10.4 Illuminator ranking service
+Runs at boot and on the re-rank period; consumes REF power, spectral flatness and probe-CAF sharpness; writes ILLUM_RANK; logs every rank change with the scores. Rank changes alter track error models, therefore they are events, not silent updates.
+### 10.5 ECA supervision and tap readback
+The PL applies canceller residuals; the PS solves or verifies tap weights per batch, reads back residual power for the ECR monitor, and alarms when achieved ECR trends toward budget. Tap weights are recorded with the batch so any batch can be re-solved offline.
+### 10.6 Tracker services
+One UKF instance per lane track and per emitter track; covariances carry the CRLB-derived DOA and range terms; coasting rules and drop rules are policy-table entries, not code constants.
+### 10.7 Fusion and association service
+Gating, attribute likelihood, covariance intersection, fused picture publication. The service is pure with respect to its inputs: given the same cue and track records it reproduces the same fused state, which is what the tb_fusion_ps trace comparison checks.
+### 10.8 Arbiter service and grant log
+Consumes cue confidence and operator commands; emits dwell grants through the validated retune path; denies with reasons. The grant log is an append-only record stream with the same hashing as evidence, because radiation history is evidence.
+### 10.9 Evidence recorder
+Owns the IQ snippet rings, computes SHA-256 at creation, appends metadata blocks, and stalls lanes on ring half-full rather than drop silently: integrity outranks continuity in a counter-surveillance system.
+### 10.10 Workstation GUI views
+Range-Doppler lane wall (per-lane pages with CFAR overlay), active B-scan and detection views (unchanged from the validated package), fused map overlay with covariances, emitter table with class likelihoods, evidence browser with one-click replay, silence monitor panel fed by the external spectrum monitor during exercises.
+### 10.11 Diagnostics and data-quality gates
+Every monitor register of section 16 feeds a data-quality gate that marks records, not just alarms: a detection produced by a lane in degraded state carries the flag into the fused picture and into the operator display, so no plausible-but-sick number ever looks healthy.
+### 10.12 Deployment and update policy
+Signed images; update accepted only after an on-box golden-model regression subset passes; configuration and software versions are reported together in every record header; rollback is a boot selection, never a re-flash under operation.
+
+# Implementation partition and resource budgets
+FIG: rfdc_alloc.png | RFDC allocation: 8 of 8 ADC blocks committed (active 224, REF x2, SURV x4, AUX); no spare remains - a fifth ULA element would need band-switched multiplexing [budget note].
+| Function | DSP slices [budget] | BRAM Kb [budget] | Notes |
+| active chain | as synthesised in GPV | as synthesised | frozen, inherited |
+| channeliser 6 lanes | 240 | 128 | FIR/CIC per lane |
+| ECA + clutter cancellers | 180 | 512 | batch LS, PL residual path |
+| CAF range compression | 420 | 1024 | FFT/IFFT per batch, BFP stages |
+| Doppler FFT + map pages | 240 | 2048 | URAM/DDR paging |
+| CFAR + DOA | 200 | 256 | mirrors validated CFAR structure |
+| passive add-on total | ~1280 | ~3968 | vs 4272 DSP / 60.5 Mb on ZU48DR |
+DDR bandwidth: raw lanes 1.84 GB/s; after PL cancellation and CAF the PS-visible traffic is below 0.3 GB/s [derived], inside the validated smartconnect/DDR path headroom.
+Timing closure strategy: passive lane is synthesised out-of-context at the fabric clock of the active build; batch boundaries absorb pipeline latency differences, and any latency change is reported in the lane status word rather than compensated by hand.
+
+# PCB design rules for the passive and mixed boards
+FIG: pcb_stackup.png | Stackup: passive RF and ULA feed networks on top over solid ground; DDR/GT inner; power planes split away from RF return paths.
+- ULA feed networks: length match within 0.1 mm intra-array; the array's phase error budget is part of the DOA CRLB, not a mechanical nicety.
+- REF and SURV paths: same connector family, same cable length class at build; differential delay measured and stored, never trimmed by eye.
+- Clock distribution: single generator, point-to-point LVDS/HSL routes, no daisy chain across the RF/ digital boundary; SYSREF class routes length-matched to the RFDC tiles.
+- AGC control loop: analog control voltage filtered and star-grounded; loop bandwidth below the CAF batch rate so AGC never modulates inside a batch.
+- Shielding: surveillance front end compartment-shielded from the active TX path; the AUX coupler is the only intended leak path.
+- Thermal: cancellation tap windows assume quasi-static multipath over a batch; board thermal steps that move cable delay trigger the calibration loop, not silent drift.
+
+# Hardware BOM compatibility review (passive additions)
+| Item | Class | Compatibility risk | Mitigation |
+| ULA elements | switchable-spacing broadband | VHF/UHF compromise spacing | band-switch network, cal per band |
+| REF yagis | per-illuminator directive | aim drift with wind | mast stiffness spec, echo monitor |
+| preselector bank | switched cavity/lumped | insertion loss vs AGC headroom | loss budgeted in NF chain |
+| LNA | low NF, high IP3 | DPI-driven compression | AGC before LNA where needed |
+| AGC VGA | fast envelope hold | hunting inside batches | loop BW rule above |
+| clock generator | jitter-cleaned multi-output | phase noise vs CAF loss | phase_drift acceptance chart |
+| RFDC channels | 8/8 committed | no spare ADC | multiplexing study [budget] |
+
+# System integration test plan
+Bench phase (cables and splitters, no RF):
+1. G0 golden ROM export and cross-check (mirrors the active --check-rom discipline).
+2. Lane integrity: tone injection per lane, group delay and gain vs golden; scale-exponent behaviour on overload.
+3. Cancellation: synthetic DPI + clutter + planted target ROM; ECR >= budget; target survival check.
+4. CAF: cable delay/Doppler offset recovery within 1 gate / 1 bin; gain within 1 dB of B*T_int.
+5. CFAR/DOA: noise-only Pfa sweep; planted angle error vs CRLB trend.
+6. Blanking: dwell injection during batches; header loss accounting exact; no map corruption.
+7. Fusion PS trace vs fusion_ref scenarios; grant log audit.
+Field phase:
+8. Illuminator survey and ranking vs site radio plan.
+9. ECR survey per lane over a diurnal thermal cycle; calibration loop re-run behaviour.
+10. Cue-to-confirm timeline measurement against the 2.5 s budget with a cooperative UAV flight.
+11. EMCON audit: T4 simulation exercise verifying zero ungranted radiation (spectrum monitor outside the site).
+| Gate | Pass criterion |
+| G0-G2 | bit-exact or stated-LSB vs ROM |
+| G-RES | passive lane OOC synthesis within budget |
+| G3 | active 10/10 unchanged + passive TBs PASS |
+| G4 | cable loopback peak within 1 gate / 1 bin |
+| G5 | field budgets met, logs complete, audit clean |
+
+# Field calibration strategy
+- Cable and path calibration: coupled tone per band at commissioning and on thermal step; stores tap offsets and complex gain per lane (cal_loop figure in section 7).
+- Array calibration: far-field source of opportunity per band; stores element gain/phase; DOA health monitor compares beamscan vs MUSIC thereafter.
+- ECR baseline survey: 24 h per lane at commissioning; sets the alarm threshold for residual DPI rise.
+- Clock plant acceptance: phase_drift chart measurement with a borrowed reference over one T_int per lane family.
+- Active chain calibration remains exactly as in the v1.4 book; M4 mode cross-checks the passive lanes against the active TX as a bistatic reference of known geometry.
+
+# Failure modes and diagnostic observables
+| Failure | Observable | Automatic response |
+| REF contaminated by target echo | CAF peak suppression/split, echo monitor | lane degraded flag, exclude from detection |
+| co-channel second illuminator | second ridge family | whitening, re-rank |
+| clock plant unlock/holdover | MTS status, long-CPI coherence flag | suspend long-CPI lanes, alarm |
+| own-TX leakage residual | zero-bistatic-range ridge during dwells | AUX tap health, blanking audit |
+| multipath ghost tracks | DOA vs bistatic consistency gate fail | track held unconfirmed |
+| illuminator outage | REF power drop | re-rank, band fallback |
+| AGC hunting inside batch | scale-exponent oscillation | lane BW rule violation alarm |
+| evidence ring overflow | half-full IRQ not serviced | recorder stalls lanes (policy) |
+| EMCON conflict | grant log vs operator log mismatch | operator wins, logged |
+Diagnostic philosophy mirrors the validated chain: every failure above has a named monitor register or log record, and no failure is allowed to present as a plausible detection without a health flag riding alongside it.
+
+# Requirements traceability
+| Req | Statement | Subsystem | Validation |
+| REQ-CS-001 | detect T1 emitters 30 MHz-6 GHz in silence | passive geolocation | G5, fusion_ref |
+| REQ-CS-002 | cue-confirm <= 2.5 s for T2 | fusion + active confirm | tb_fusion_ps, G5 |
+| REQ-CS-003 | hold T3 RF-silent targets | active chain | GPV 10/10, G3 |
+| REQ-CS-004 | own emission bounded and logged | arbiter | grant log audit |
+| REQ-CS-005 | CAF coherence <= 0.5 dB loss | clock plant | phase_drift chart, G4 |
+| REQ-CS-006 | ECR >= 80 dB per lane | cancellation | tb_eca, field survey |
+| REQ-CS-007 | no regression of validated active chain | all | G3 |
+| REQ-CS-008 | every cue/fix evidence-hashable | recorder | replay audit |
+| REQ-CS-009 | DOA rms <= 3 deg at SNR >= 20 dB | array + P08 | tb_doa, array cal |
+| REQ-CS-010 | lane changes logged with error model | ranking | log audit |
+
+# Production architecture and variants
+The integrated box is the reference variant. Two derivatives share this book: the passive-only box (PCL-EDB-002, where the AUX channel becomes the survey channel and the arbiter degenerates to an operator scheduler) and the multi-node site grid (nodes share the fibred 10 MHz reference and exchange cue/fix records; TDOA becomes available). A fourth study item - a fifth surveillance element via band-switched multiplexing - is flagged [budget] and must not be assumed in any error model until measured.
+
+# Frozen baseline statement and references
+The active baseline is frozen at GPV ps-runtime / GPM v1.8; any change to it requires re-running the 10/10 regression and the 83-check validation and re-issuing this book's section 6. The passive baseline freezes at the block set P01-P12 with the budgets of sections 7 and 11; G-RES synthesis is the gate that converts budgets into measured numbers.
+1. GPM repository v1.8 - validated MATLAB/Simulink package (active algorithm truth).
+2. GPV repository, branch ps-runtime - validated RTL, PS runtime, subband plan, PROVENANCE.
+3. GPR_SFCW_Engineering_Design_Book_RFSoC48DR_v1.4 - active RF hardware boards A-E.
+4. AMD UG1410 (ZCU208), PG269 (RF Data Converter); ZCU208 kit page (XCZU48DR SCD5184/FSVG1517 note).
+5. Griffiths & Long 1986; Howland 1999; Colone et al. (multistage/ECA family); Bournaka et al. 2008; Malanowski et al. (DAB/DVB-T PCL).
+6. Skolnik, Radar Handbook - bistatic equations, CFAR discipline.
+7. GPV software/ps/BRINGUP_GATES.md - gate discipline reused for G0-G5.
+
+# Appendix A - Extended block diagram explanations
+## BLOCK 1: CLOCK AND COHERENCE GENERATOR
+Site 10 MHz enters one jitter-cleaned generator; every converted channel in the box derives from it, which is why the CAF coherence term is a plant spec. The generator's outputs are verified at boot by MTS status words; failure halts passive start.
+## BLOCK 2: PASSIVE ANTENNA FIELD
+Two directive references and a four-element surveillance array; the array is both a DOA instrument and, summed, an omni surveillance channel. Element phase errors enter the DOA CRLB directly, so the array is calibrated, not assumed.
+## BLOCK 3: PASSIVE RF FRONT END (board C-P)
+Preselectors, LNA, AGC held on the DPI envelope; the gain plan is a linearity plan, because targets arrive 60-90 dB below the interferer.
+## BLOCK 4: RFDC AND CHANNELISER
+2.4576 GSPS sampling, zone plan per band, 32x decimation to 76.8 MS/s lanes; scale exponents keep DPI-dominated frames from clipping the fixed-point chain.
+## BLOCK 5: ECA AND CLUTTER CANCELLATION
+Batch least-squares projection; the only adaptive-looking structure in the chain, and deliberately batch-wise so that every solve is reproducible from recorded data.
+## BLOCK 6: CAF RANGE AND DOPPLER
+Frequency-domain correlation per batch, Doppler FFT across batches; CP gates and pilot notches applied per lane standard.
+## BLOCK 7: DETECTION AND DOA
+2-D CA-CFAR with validated-chain threshold discipline; beamscan default, MUSIC on demand; every detection leaves with an angle and a hash.
+## BLOCK 8: TRACKS, FUSION, ARBITER
+Lane UKFs, CI fusion, kinematic gating, cue FIFO; the arbiter prices radiation in dB of lost passive gain and seconds of own emission.
+## BLOCK 9: ACTIVE CHAIN (FROZEN)
+The validated SFCW chain, unchanged except blanking status, confirm-dwell parameter set and timestamp export.
+## BLOCK 10: EVIDENCE AND REPLAY
+Every record hashable, every page replayable through the golden model; the deployed system's regression test is its own evidence archive.
+
+# Appendix B - Equation collection
+EQ: delta_R = c / (2 B cos(beta/2))
+EQ: delta_fd = 1 / T_int ; delta_v = lambda / (2 T_int cos(beta/2))
+EQ: G_caf = B T_int
+EQ: SNR = P_t G_t G_r lambda^2 sigma_b ECR_eff / ((4 pi)^3 R_t^2 R_r^2 k T0 B F L) * (B T_int)
+EQ: sigma_theta ~= lambda / (2 pi d cos theta sqrt(2 SNR N_snap))
+EQ: phi_drift = 2 pi f_c T_int sigma_y ; ECR_req = DPI_above_target + margin
+EQ: f_fabric = f_adc / D ; L_batch = T_batch f_fabric
+
+# Appendix C - Glossary
+| Term | Meaning |
+| CAF | cross-ambiguity function |
+| ECA | extensive cancellation algorithm (batch LS projection) |
+| ECR | extensive cancellation ratio (DPI suppression) |
+| DPI | direct-path interference |
+| PCL | passive coherent location |
+| EMCON | emission control policy |
+| CI | covariance intersection |
+| MTS | multi-tile sync (RFDC) |
+| ULA | uniform linear array |
+| CPI | coherent processing interval |
+| TDOA/AOA | time difference of arrival / angle of arrival |

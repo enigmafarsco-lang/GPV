@@ -1,0 +1,282 @@
+# Illuminators of opportunity: waveform physics and selection
+
+## Why the waveform, not the receiver, sets passive performance
+A passive coherent location (PCL) receiver transmits nothing; it borrows waveforms that broadcast operators emit for their own customers. Every performance attribute that a radar designer normally buys with waveform design - bandwidth, integration time, ambiguity shape - is therefore inherited from a third-party signal standard. The engineering task is to know each standard's ambiguity function precisely enough to predict range resolution, Doppler resolution and sidelobe behaviour, and then to build a cancellation and correlation chain that reaches those limits in fixed point on the RFSoC.
+This section states, per illuminator, the parameters that enter the passive radar equations used later: channel bandwidth B (range resolution), coherence behaviour over integration time T_int (Doppler resolution and processing gain G = B*T_int), and the ambiguity defects that the processing must tolerate or remove.
+
+FIG: range_res_bw.png | Passive range resolution c/(2B) versus illuminator bandwidth with the four candidate families marked [derived].
+
+FIG: doppler_res_cpi.png | Velocity resolution lambda/(2*T_int) versus integration time for three carrier families [derived]. Narrowband illuminators buy fine Doppler with long CPIs.
+
+EQ: delta_R = c / (2 B cos(beta/2))      (bistatic range resolution)
+EQ: delta_fd = 1 / T_int ;  delta_v = lambda / (2 T_int cos(beta/2))
+EQ: G_caf = B * T_int                     (coherent processing gain)
+
+## FM broadcast (87.5-108 MHz)
+FM radio is wideband in time but narrowband in spectrum: a 200 kHz channel gives c/(2B) = 750 m range cells, which is useless for fine range but irrelevant to the mission role FM actually serves. The analogue frequency modulation of the stereo composite baseband (L+R, 19 kHz pilot, L-R DSB-SC, RDS) makes the instantaneous bandwidth content-dependent, so the ambiguity function is a thumbtack riding on programme-dependent sidelobes. Long integration (10-60 s) averages those sidelobes down and yields Doppler resolution of a few tens of mHz: enough to separate a hovering rotary-wing target from transiting traffic by micro-Doppler sidebands.
+Engineering consequences: FM lanes are Doppler lanes. Range information from FM is only a coarse gate; the fusion engine must never weight FM bistatic range at face value. Programme sidelobes require CFAR guard cells sized in Doppler, not range, and reciprocal filtering is optional because T_int does the sidelobe work for free.
+
+## DAB / COFDM Band III (174-240 MHz)
+DAB Mode I is continuous COFDM: 1536 subcarriers in 1.536 MHz, symbol duration 1.246 ms with a 246 us cyclic prefix, plus continuous and scattered pilots. The pilot structure is deterministic and known, which makes the ambiguity function nearly ideal after pilot handling: range resolution 98 m, and a clean periodic structure that must be suppressed in the reference channel equalisation to avoid pilot replicas in the range-Doppler map.
+DAB is the workhorse VHF track lane: continuous (no burst gaps), moderately wideband, and present in most European sites. Its carrier family also gives acceptable velocity resolution at 1-2 s CPI (about 0.6-0.3 m/s at 200 MHz).
+
+## DVB-T / COFDM UHF (470-862 MHz)
+DVB-T in 8k mode with 7.61 MHz channel bandwidth is the finest civilian illuminator below 1 GHz: 19.7 m range cells. The defects are structural: the cyclic prefix creates a strong ambiguity ridge at delay tau = Tu (useful symbol length), and the scattered plus continuous pilots create replicas every symbol in delay and every carrier spacing in Doppler. Both are handled deterministically: CP-aware reference filtering (or explicit exclusion of the tau = Tu gate) and pilot-notch equalisation of the reference channel.
+Guard-interval choice by the broadcaster (1/4 to 1/32) changes Tu and hence the ridge position; the lane configuration must therefore read the TPS-decoded parameters of the local multiplex at lane setup, not assume them. This is a configuration input, verified by the lane health monitor.
+
+## LTE FDD downlinks (700-2600 MHz)
+LTE downlink OFDMA offers 5-20 MHz of bandwidth (7.5-30 m range cells) with cell-specific reference signals that stabilise the ambiguity function, but the data traffic makes the instantaneous spectrum non-stationary: resource-block loading changes every 1 ms subframe. The reference channel must be spectrally whitened per subframe batch before correlation, otherwise the CAF inherits the traffic envelope as range sidelobes. LTE lanes are short-CPI lanes (0.2-1 s) and are the urban fine-resolution complement to DVB-T.
+FDD is mandatory for PCL convenience: the downlink is continuous in time, so no burst synchronisation is needed. TDD variants are explicitly excluded from the lane set in this revision.
+
+## GSM downlinks (900/1800 MHz)
+GSM is retained only as a cross-check lane: 200 kHz channels give 750 m cells, and the 0.577 ms burst structure imposes Doppler ambiguities at multiples of 1.74 kHz. Its value is independence - a GSM cue that agrees with a DVB-T track is strong evidence against processing artefacts - not resolution.
+
+## Illuminator ranking and lane assignment policy
+At start-up and on a re-rank period [budget 300 s], each candidate channel is measured for reference-channel SNR, CAF peak-to-sidelobe sharpness on a short probe integration, and persistence. Lanes are then assigned: one DVB-T or LTE lane as fine-range primary, one DAB or FM lane as long-CPI Doppler primary, and remaining capacity as hot spares. The ranking table is exported to the operator and logged with the evidence chain, because a lane change changes the error model of every track it feeds.
+| Illuminator | Band | B | c/(2B) [derived] | Typical CPI | Mission role | Principal ambiguity defect |
+| FM | 87.5-108 MHz | 200 kHz | 750 m | 10-60 s | Doppler cue, micro-Doppler class | programme sidelobes |
+| DAB | 174-240 MHz | 1.536 MHz | 98 m | 1-10 s | VHF track lane | pilot replicas |
+| DVB-T | 470-862 MHz | 7.61 MHz | 19.7 m | 0.5-2 s | UHF fine-range lane | CP ridge at Tu, pilots |
+| LTE FDD DL | 700-2600 MHz | 5-20 MHz | 30-7.5 m | 0.2-1 s | urban fine lane | traffic non-stationarity |
+| GSM DL | 900/1800 MHz | 200 kHz | 750 m | burst-limited | independent cross-check | burst Doppler ambiguity |
+
+# Passive RF front end and channelisation
+
+## Channel set and antenna architecture
+The passive receiver needs, per site, two reference channels and four surveillance channels, plus one auxiliary channel whose role differs between the integrated and standalone configurations (own-TX monitor in the integrated box, wideband survey channel in the passive-only box). Reference antennas are directive elements aimed at the selected illuminators; their job is to deliver a target-free copy of the waveform, and the design rule is that target echoes entering the reference channel must stay at least 20 dB below the illuminator copy or the cancellation loop will subtract real targets (signal cancellation).
+Surveillance channels form a four-element uniform linear array. Element spacing is a band compromise [budget 0.5 lambda at 550 MHz with switchable coarse spacing for VHF]; the array feeds both DOA estimation and, by digital summing, an omnidirectional surveillance channel for lanes where DOA is not required.
+
+FIG: rf_chain_surv.png | Surveillance chain: linearity is set by direct-path interference 60-90 dB above target echoes; AGC holds the RF-ADC below clipping on DPI, not on targets.
+
+FIG: rf_chain_ref.png | Reference chain: fixed gain, high out-of-band rejection, no AGC hunting; gain stability matters more than noise figure once the illuminator copy is far above noise.
+
+## Dynamic range and linearity budget
+The surveillance chain's defining number is the direct-path interference level relative to the weakest target echo of interest. With a broadcast ERP of 10^4-10^5 W at a few to tens of km, DPI at the antenna can sit 60-90 dB above target echoes; the RF-ADC must see DPI below full scale with margin, and the target echoes must still clear the ADC noise floor after cancellation. This forces the gain plan: modest front-end gain, AGC referenced to the DPI envelope, and cancellation performed digitally at full converter resolution.
+| Quantity | Value | Basis |
+| DPI above target echo at antenna | 60-90 dB | site geometry template [budget] |
+| ADC full-scale margin on DPI | >= 6 dB | AGC hold rule [budget] |
+| Post-cancellation noise floor target | k*T0*B*F + 3 dB | ECR >= 80 dB [budget] |
+| RF-ADC SNR class (RFDC 14-bit) | adequate at 76.8 MS/s lane rate | converter spec [validated practice] |
+| IP3 requirement driver | DPI + strongest out-of-band broadcast | preselector rejection first, then LNA IP3 [budget] |
+
+## Cable matching, delay calibration and thermal behaviour
+ECA cancellation works in taps of the reference channel; any differential delay between REF and SURV paths that exceeds the tap window is an uncancellable error. Cable lengths are matched at build to within one tap (13 ns at 76.8 MS/s), and the residual is measured with a coupled calibration tone and stored as a per-lane tap offset and complex gain correction.
+Thermal drift of coax and filters moves that differential delay slowly; the calibration loop re-runs on a thermal step trigger or on operator command, and the lane health monitor alarms if residual DPI power rises above the ECR budget between calibrations.
+
+FIG: cal_loop.png | Calibration loop: coupled known tone into REF and SURV, measure differential delay and gain per lane, store tap-offset table in PS DDR.
+
+## RFDC channelisation and Nyquist zone plan
+All passive ADCs sample at 2.4576 GSPS, half the validated active rate and an integer relative of the 245.76 MHz fabric clock family, so that active and passive lanes share one clock plant without fractional relationships. Nyquist zone 1 (DC-1.2288 GHz) contains FM, DAB and the whole DVB-T band; LTE downlinks at 1.8 and 2.6 GHz are taken in zones 2 and 3 with the RFDC digital down-converter tuned per channel. Decimation by 32 yields a 76.8 MS/s complex fabric rate per lane, ample for the widest 20 MHz LTE channel after channeliser filtering.
+
+FIG: ddc_zones.png | Nyquist zone plan at fs = 2.4576 GSPS: broadcast families in zone 1, LTE DL in zones 2-3 via per-channel DDC tuning.
+
+FIG: fir_response.png | Lane channeliser magnitude response (decimation stage): adjacent-channel and zone-edge rejection before cancellation [simulated].
+
+EQ: f_fabric = f_adc / D = 2.4576e9 / 32 = 76.8e6 samples/s per lane [derived]
+| Lane | RFDC channel | f_adc | DDC decim | fabric rate | Content |
+| REF-1 | ADC t0 b0 | 2.4576 GSPS | 32x | 76.8 MS/s | illuminator k copy |
+| REF-2 | ADC t0 b1 | 2.4576 GSPS | 32x | 76.8 MS/s | illuminator m copy |
+| SURV-1..4 | t0 b2, t0 b3, t1 b0, t1 b1 | 2.4576 GSPS | 32x | 76.8 MS/s | ULA elements |
+| AUX | t1 b2 | 2.4576 GSPS | 4x-32x | 76.8-614.4 MS/s | TX monitor or survey |
+
+# Interference and clutter cancellation
+
+## The two cancellation problems
+Before any correlation gain can be realised, the surveillance channel must be cleaned of (a) direct-path interference - the illuminator seen straight into the surveillance antenna - and (b) static and slow clutter: ground, buildings and antenna-to-antenna leakage, which occupies the zero-Doppler ridge and its Doppler-spread skirt. Both are linear in the reference waveform, so both are removed by least-squares projection of the surveillance data onto a subspace spanned by delayed (and, for clutter, Doppler-shifted) copies of the reference.
+The batch form of this projection is the Extensive Cancellation Algorithm. It is chosen deliberately over adaptive filters: a batch least-squares solve has deterministic numerical behaviour, can be golden-modelled in fixed point exactly like the validated active chain, and maps onto BRAM-resident block processing with known latency.
+
+EQ: x_clean[b] = x_surv[b] - sum_{m=0}^{M-1} w_m * x_ref[b-m],   w = argmin ||x_surv[b] - X w||^2
+EQ: residual_clutter[b, f_d] = x_clean[b] - <x_ref e^{j2pi f_d t}, x_clean> / ||.||^2 * x_ref e^{j2pi f_d t}
+
+## Tap count, batch length and ECR budget
+The tap count M must span the differential multipath delay spread seen by the surveillance antenna plus the calibrated cable offset; batch length must be short enough that the multipath impulse response is quasi-static within a batch, and long enough that the least-squares solve has overwhelming degrees of freedom. With 76.8 MS/s lanes and 0.1-0.5 s batches the solve is heavily over-determined for M <= 32, and the achievable ECR is limited by reference-channel noise and fixed-point word length, not by degrees of freedom.
+The system budget requires ECR >= 80 dB: DPI up to 70 dB above target echoes plus 10 dB margin so that post-cancellation residue sits below the thermal floor. Fixed-point analysis (section on CAF word length) shows the accumulator and tap paths must hold about 80 dB of dynamic range between DPI and residue, which sets 32-bit complex taps and 40-bit accumulation in the canceller back end [budget].
+
+FIG: ecr_sweep.png | Simulated ECR versus tap count on synthetic multipath DPI: the 80 dB budget is reached well inside M = 32 [simulated].
+
+FIG: canc_before_after.png | SURV spectrum before and after ECA on synthetic DPI + clutter + a weak planted target: the target survives, the interferer does not [simulated].
+
+FIG: clutter_doppler.png | Zero-Doppler and slow-clutter ridge before and after per-Doppler projection; a 900 Hz target echo is preserved [simulated].
+
+## Reference-channel health and signal cancellation
+If the reference channel contains target echo energy (reference antenna sidelobes pointing at the target), the cancellation loop treats that echo as interference and subtracts it from surveillance - the classical signal-cancellation failure. Defences are layered: directive reference antennas (geometric), a reference-to-surveillance echo monitor that compares CAF peak strength in REF versus SURV (analytic), and a policy rule that a lane whose REF echo monitor exceeds -20 dB is flagged degraded and excluded from detection until re-aimed.
+| Failure | Mechanism | Observable | Defence |
+| Signal cancellation | target echo in REF | CAF peak suppression/split | REF echo monitor, directivity |
+| Uncancellable DPI | delay beyond tap window | residual ridge at zero bistatic range | cable cal, tap window alarm |
+| Clutter skirt residue | Doppler-spread clutter | raised floor near zero Doppler | per-f_d projection count |
+| Co-channel second transmitter | two waveforms in one lane | second CAF ridge family | whitening, lane re-rank |
+
+# Cross-ambiguity function and range-Doppler formation
+
+## Definition and batch structure
+After cancellation, each lane correlates the cleaned surveillance stream against delayed and Doppler-shifted copies of its reference:
+EQ: chi(tau, f_d) = sum_t x_surv_res[t] * conj(x_ref[t - tau]) * exp(j 2 pi f_d t)
+Implementation is the standard two-step: per batch, range compression by frequency-domain correlation (FFT of reference, multiply, IFFT) producing a delay profile per Doppler shift, then a Doppler FFT across batches per delay gate. The range-Doppler map page for a lane is the detection surface; its axes are bistatic range gate and Doppler bin, and its noise floor is set by cancellation residue and CAF word length, not by thermal noise alone.
+
+FIG: amb_fm.png | FM programme CAF: thumbtack peak with content-dependent sidelobes that long integration averages down [simulated].
+
+FIG: amb_dvbt_cut.png | CP-OFDM zero-Doppler delay cut showing the cyclic-prefix ridge at tau = Tu that the lane must gate or filter [simulated].
+
+FIG: rd_map_dvbt.png | DVB-T lane range-Doppler map with three planted targets after cancellation and CFAR-preprocessing [simulated].
+
+FIG: rd_map_fm.png | FM long-CPI range-Doppler map: coarse range, very fine Doppler; micro-Doppler sidebands live in this view [simulated].
+
+## Processing gain, coherence and word length
+The coherent gain G = B*T_int is the reason passive radar works at all: 63-70 dB across the candidate set. Two error terms eat it: clock/coherence phase drift across T_int, and fixed-point quantisation in the correlation accumulator. Because all channels share one clock plant, the drift term is a plant specification rather than a per-receiver error; the derived loss curve below converts an Allan deviation at 1 s into CAF gain loss at 600 MHz and shows why a common ovenised or GPS-disciplined plant is sufficient by orders of margin.
+Quantisation is analysed the same way as in the validated active chain: the accumulator word length is swept in the golden model and the CAF gain loss is measured against the floating-point reference; the book's budget is <= 1 dB loss, met at 40-bit complex accumulation for DVB-T-class lanes [simulated].
+
+FIG: gain_ctime.png | CAF processing gain B*T_int versus integration time per illuminator family [derived].
+
+FIG: phase_drift.png | CAF gain loss versus clock plant Allan deviation at 600 MHz, T_int = 1 s: the shared plant sits far left of the 0.5 dB limit [derived].
+
+FIG: quant_noise.png | Fixed-point CAF degradation versus accumulator word length with the 1 dB budget line [simulated].
+
+## Ambiguity defect handling per lane
+- DVB-T: exclude or CP-filter the tau = Tu gate; notch scattered/continuous pilots in REF equalisation; read TPS parameters at lane setup.
+- FM: accept programme sidelobes; size CFAR guard in Doppler; optional reciprocal filtering when T_int < 5 s.
+- DAB: suppress pilot replicas by REF equalisation; verify Mode I parameters from the FIC.
+- LTE: per-subframe spectral whitening of REF; reject subframes with reference-signal muting anomalies.
+- GSM: burst-aligned correlation windows only; Doppler ambiguity map applied at tracker level.
+
+# Detection, DOA and tracking
+
+## Two-dimensional CA-CFAR on the range-Doppler map
+Detection mirrors the validated active chain's discipline: cell-averaging CFAR on the log-magnitude map with guard and training rings sized per lane (guard 2x2, train 8x8 cells [budget]), Pfa 1e-6, and a deterministic threshold multiplier computed from the training count exactly as in the active CFAR so that the fixed-point threshold path is golden-modelable. Detections carry (lane id, bistatic range gate, Doppler bin, DOA estimate, SNR above threshold, frame timestamp from the common clock).
+
+FIG: cfar_map.png | One-dimensional cut of the 2-D CA-CFAR statistic and threshold on a simulated range-Doppler map: planted cells detected, noise floor held [simulated].
+
+## Direction of arrival on the surveillance array
+Per detected cell the four-element ULA provides an angle: beamscan by default (steered sums over the spatial spectrum, robust and cheap), with MUSIC available when two emitters or two targets share a range-Doppler cell and the snapshot covariance rank supports it. The CRLB-form accuracy relation below is carried in the track covariance from the first update:
+EQ: sigma_theta ~= lambda / (2 pi d cos(theta) sqrt(2 SNR N_snap))   [derived]
+Array calibration (mutual coupling, element gain/phase) is measured with a far-field source of opportunity at commissioning and stored per band; the DOA health monitor compares beamscan and MUSIC peaks where both run and alarms on disagreement beyond 2 sigma.
+
+FIG: doa_beam.png | Beamscan spatial spectrum with two sources at -18 and +7 degrees on the 4-element ULA [simulated].
+
+FIG: doa_music.png | MUSIC pseudospectrum resolving a -18 / -12 degree pair that beamscan merges [simulated].
+
+## Bistatic tracking and micro-Doppler
+Each lane runs a UKF in bistatic coordinates (bistatic range, range rate, DOA) with conversion to site Cartesian at fusion. Narrowband lanes add a micro-Doppler descriptor: the Doppler cut series around a track is inspected for rotor sideband combs, which is the primary rotary-wing cue on FM/DAB lanes where range is coarse.
+FIG: microdoppler.png | Simulated UAV micro-Doppler sideband comb around the body Doppler on a narrowband illuminator; the descriptor is the comb spacing and its modulation [simulated].
+
+## Emitter geolocation (passive-only observable)
+Cooperative-free geolocation of emitters (covert transmitters, hostile radars) uses the emitter's own waveform: wideband correlator DOA on the surveillance array for angle, and - with a second node on the site grid - TDOA from the common-referenced timestamps for a hyperbolic line of position. Single-node fixes are AOA-only and are reported with an explicitly unbounded range covariance; the fusion and reporting layers must never present an AOA-only fix as a position.
+FIG: geo_bistatic.png | Bistatic geometry: illuminator, target and receiver; constant R_t + R_r defines the bistatic ellipse and the beta/2 bisector scaling of resolution.
+FIG: geo_tdoa.png | Two-node emitter fix: AOA line from node 1 intersecting the TDOA hyperbola between nodes.
+FIG: tdoa_err.png | Illustrative fix error ellipses: AOA-only, AOA+TDOA and three-node TDOA least squares.
+
+# Passive chain block-by-block explanation
+
+## P01 Channeliser and lane formatter
+Purpose: take the 76.8 MS/s complex lane streams from the RFDC DDCs, apply channeliser filtering and per-lane digital gain, and format fixed-point frames for the cancellation stage. Inputs: six lane streams plus lane configuration (gain, filter set, mute map). Outputs: framed Q1.15-ish scaled complex samples with per-frame scale exponent so that DPI-dominated frames do not clip downstream. Determinism: FIR/CIC structure identical per lane; latency constant and reported in the lane status word. Failure signature: scale exponent saturation alarms; filter coefficient checksum mismatch halts the lane. Validation: tb_chan tone placement and group delay against golden ROM.
+
+## P02 Reference conditioning
+Purpose: equalise the reference channel (pilot notch, CP-aware filter, LTE whitening coefficients) and produce the clean waveform copy that all projections use. Inputs: REF lane, lane parameter set decoded from the standard (TPS/FIC/CRS configuration). Outputs: conditioned reference stream plus a reference health word (power, spectral flatness, echo-monitor metric). Failure signature: flatness metric collapse indicates wrong lane tuning or transmitter fault. Validation: tb_refcond pilot replica suppression on golden DVB-T/DAB ROMs.
+
+## P03 ECA direct-path canceller
+Purpose: batch least-squares subtraction of delayed reference copies from surveillance (M taps, batch 0.1-0.5 s). Inputs: SURV frame, conditioned REF frame, tap window centre from cable calibration. Outputs: DPI-clean frame, achieved residual power per batch (ECR monitor), tap weights for PS readback. Fixed point: 32-bit complex taps, 40-bit accumulation, normal-equation solve supervised by PS with PL residual application [budget]. Failure signature: residual power above budget => lane degraded flag. Validation: tb_eca bit-exact ECR on synthetic DPI ROM.
+
+## P04 Clutter canceller
+Purpose: remove zero-Doppler and slow-clutter ridge by projecting out Doppler-shifted reference copies across the clutter Doppler span. Inputs: P03 output, clutter span configuration. Outputs: clutter-clean frame, per-f_d projection count. Failure signature: raised map floor near zero Doppler. Validation: tb_eca clutter case in the same ROM set.
+
+## P05 CAF range compression
+Purpose: frequency-domain correlation of cleaned surveillance against conditioned reference per batch, producing delay profiles. Inputs: P04 output, REF. Outputs: delay profiles per Doppler step batch; CP gate mask applied per lane. Fixed point: 40-bit complex accumulation, block-floating-point per FFT stage. Failure signature: CP ridge leakage alarm on DVB-T lanes. Validation: tb_caf peak position and gain versus pcl_chain_ref ROM.
+
+## P06 Doppler formation
+Purpose: Doppler FFT across batches per delay gate; window selectable (rectangular for maximum resolution, Blackman-Harris when sidelobe control dominates). Outputs: range-Doppler map page to DDR and to P07. Failure signature: batch count shortfall (blanking) flagged in page header. Validation: tb_caf Doppler axis checks.
+
+## P07 Two-dimensional CFAR
+Purpose: CA-CFAR on log-magnitude map with lane-specific guard/train; deterministic multiplier. Outputs: detection list records. Failure signature: detection rate vs Pfa monitor divergence. Validation: tb_cfar2d noise-only Pfa and planted-target Pd.
+
+## P08 DOA estimator
+Purpose: beamscan (default) or MUSIC (on demand) per detection cell using the four SURV element snapshots retained around the cell. Outputs: angle + spatial spectrum quality word. Failure signature: beamscan/MUSIC disagreement alarm. Validation: tb_doa angle error vs CRLB trend ROM.
+
+## P09 Emitter detector and classifier
+Purpose: on the survey/AUX channel and on wideband slices, detect non-cooperative emitters, estimate features (bandwidth mask, modulation family, burst/PRI structure, micro-Doppler comb) and emit class likelihood vectors. Outputs: emitter event records. Failure signature: confidence below policy => record stays 'unresolved cluster', never forced. Validation: tb_survey + classification reference traces.
+
+## P10 Bistatic tracker
+Purpose: per-lane UKF in bistatic coordinates with micro-Doppler descriptor attachment. Outputs: lane tracks with covariances. Validation: tb_track scenario traces vs fusion_ref.
+
+## P11 Geolocation engine
+Purpose: AOA/TDOA combination per emitter event across nodes; covariance from CRLB forms; 2-D fixes with honest altitude-unbounded covariance. Outputs: emitter fixes. Validation: tb_tdoa two-node timestamp association and fix error.
+
+## P12 Evidence and health recorder
+Purpose: attach SHA-256 hashes of IQ snippets and metadata to every detection/fix record; maintain lane health history (ECR monitor, REF echo monitor, scale exponents, calibration age). Outputs: evidence records and health pages. Validation: replay audit test (hash equality on reprocess).
+
+# Signal-domain views: how to read the passive figures
+## Per-illuminator ambiguity surfaces
+The four CAF surfaces below are the single most important commissioning reference: a lane whose measured surface does not resemble its family template is mis-tuned, contaminated, or observing a different transmitter than the reference antenna believes. Compare shape first, peak second: the DVB-T lane must show the CP ridge at Tu and pilot replicas; the LTE lane must show traffic-weighted granularity that whitening flattens; the GSM lane must show the burst-train Doppler comb; the DAB lane must be the cleanest thumbtack of the set.
+FIG: amb_dab.png | DAB lane CAF template: pilot-stabilised thumbtack, replicas at symbol periodicity [simulated].
+FIG: amb_lte.png | LTE lane CAF template after per-subframe whitening: fine delay cells, traffic granularity visible as mild ridge noise [simulated].
+FIG: amb_gsm.png | GSM burst train template: Doppler ambiguity combs at multiples of 1/T_burst; range axis nearly uninformative [simulated].
+## Range-Doppler map families
+A range-Doppler map page is the detection surface and the operator's primary passive picture. The three families differ in axis meaning: DVB-T and LTE pages carry usable bistatic range; DAB pages carry usable range only as a gate; FM pages (previous section) are Doppler instruments. Planted-target templates below define what a healthy page looks like after cancellation: flat noise floor, point-like targets, no zero-Doppler skirt, no CP ridge leakage.
+FIG: rd_map_dab.png | DAB page template: medium range cells, fine Doppler, two planted targets [simulated].
+FIG: rd_map_lte.png | LTE page template: fine range cells at short CPI, three planted targets [simulated].
+FIG: fm_cpi_doppler.png | FM long-CPI Doppler cut: hovering rotary-wing target shows a rotor comb around the body line; transiting targets show a single narrow line [simulated].
+## Front-end behaviour views
+Two views explain the front end to anyone who has never seen DPI: the AGC hold view shows why the converter is never allowed to see the interferer near full scale, and the reference pattern view shows the geometric guard against signal cancellation.
+FIG: agc_hold.png | AGC envelope hold on DPI pulses: converter input held flat while antenna-level interference swings 40 dB [simulated].
+FIG: antenna_pattern.png | Reference antenna pattern template with the -20 dB echo-monitor guard line that protects against signal cancellation.
+FIG: doa_bands.png | DOA beamwidth versus carrier for fixed 0.275 m element spacing: VHF broadens, LTE narrows; band-switched spacing policy follows from this chart [simulated].
+
+# Passive validation hooks and gates
+| Gate | Content | Pass criterion |
+| G0 | golden ROM export from passive_channel_sim.m / pcl_chain_ref.m | plan and rounding cross-check PASS |
+| G1 | tb_chan, tb_refcond, tb_eca | bit-exact vs ROM |
+| G2 | tb_caf, tb_cfar2d, tb_doa | bit-exact or within stated LSB bounds |
+| G-RES | out-of-context synthesis of passive lane | within DSP/BRAM budget table |
+| G3 | integrated regression (active unchanged) | active 10/10 + passive TBs PASS |
+| G4 | cable loopback: CAF peak at cable delay/Doppler | peak within 1 gate / 1 bin |
+| G5 | field: ECR survey, illuminator ranking, cue timeline | budgets met, logs complete |
+
+# Passive chain configuration and status tables (per block)
+## P01 Channeliser configuration
+| Field | Bits | Meaning |
+| lane_gain[k] | 12 | digital gain per lane, dB code |
+| filt_set[k] | 4 | channeliser filter bank index per band |
+| mute_map | 6 | lane mute mask |
+| scale_exp_mon | RO | block-floating-point exponent per frame |
+## P02 Reference conditioning configuration
+| Field | Bits | Meaning |
+| std_id | 4 | FM/DAB/DVB-T/LTE/GSM parameter set |
+| pilot_notch_en | 1 | pilot replica notch in REF equaliser |
+| cp_filter_en | 1 | CP-aware filter (DVB-T) |
+| whiten_en | 1 | per-subframe whitening (LTE) |
+| flatness_mon | RO | spectral flatness metric, alarm threshold in PS |
+## P03 ECA canceller configuration and status
+| Field | Bits | Meaning |
+| taps_M | 6 | tap count per lane |
+| batch_code | 4 | batch length code (0.1-0.5 s) |
+| tap_centre[k] | 10 | cable-calibrated delay centre per lane |
+| ecr_mon[k] | RO 20 | residual power per batch, dB code |
+| tap_weights_rd | DMA | PS readback of solved weights per batch |
+## P04 Clutter canceller configuration
+| Field | Bits | Meaning |
+| fd_span | 8 | clutter Doppler span code |
+| fd_step | 8 | projection spacing code |
+| proj_count | RO | projections applied per batch |
+## P05/P06 CAF configuration
+| Field | Bits | Meaning |
+| tint_code | 4 | integration time code per lane family |
+| batch_count | 12 | batches per map page |
+| dop_span | 12 | Doppler search span code |
+| window_sel | 3 | rectangular / Blackman-Harris / Hamming |
+| cp_gate_mask | 16 | excluded delay gates (DVB-T Tu ridge) |
+| accum_wordlen | 6 | complex accumulator word length (40 default) |
+## P07 CFAR configuration
+| Field | Bits | Meaning |
+| guard_xy | 8 | guard ring cells per axis |
+| train_xy | 8 | training ring cells per axis |
+| pfa_code | 8 | threshold multiplier index (deterministic table) |
+| det_rate_mon | RO | detections per page vs Pfa monitor |
+## P08 DOA configuration
+| Field | Bits | Meaning |
+| mode | 2 | beamscan / MUSIC / both |
+| cal_table_idx | 4 | per-band array calibration table |
+| disagree_mon | RO | beamscan vs MUSIC disagreement, sigma code |
+## P09-P12 services (PS-side configuration)
+| Field | Register | Meaning |
+| survey_mask_idx | SURVEY_PLAN | site radio plan occupancy mask version |
+| class_policy_conf | EMCON_POLICY/evid | confidence floor below which class stays unresolved |
+| ring_drop_flags | PASS_STATUS | long-CPI ring overrun history |
+| hash_algo_id | EVID | SHA-256 identifier in evidence headers |

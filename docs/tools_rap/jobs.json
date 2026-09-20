@@ -1,0 +1,20 @@
+[
+ {"dsl":"rap_book.txt",
+  "out":"out/RAP_Integrated_Active-Passive_Counter-Surveillance_Radar_Design_Book_v1.0.docx",
+  "title":"RAP - Integrated Active-Passive Counter-Surveillance Radar System",
+  "subtitle":"Engineering Design Book: coherent fusion of the validated SFCW active radar with a passive coherent location receiver on one XCZU48DR platform",
+  "docnum":"RAP-EDB-001",
+  "meta":[["Document number","RAP-EDB-001"],["Revision","1.0"],["Date","2026-09-20"],
+          ["Platform baseline","AMD Zynq UltraScale+ RFSoC XCZU48DR (ZCU208 class)"],
+          ["Status","Engineering design book - issued for review"],
+          ["Companion documents","PCL-EDB-002 (passive-only), GPR_SFCW v1.4 (active RF hardware), GPV ps-runtime + GPM v1.8 (validated chain)"]]},
+ {"dsl":"pcl_book.txt",
+  "out":"out/Passive_Only_Counter-Surveillance_Radar_Design_Book_v1.0.docx",
+  "title":"Passive-Only Counter-Surveillance Radar System",
+  "subtitle":"Engineering Design Book: silent passive coherent location and emitter geolocation on XCZU48DR, no transmitter of own",
+  "docnum":"PCL-EDB-002",
+  "meta":[["Document number","PCL-EDB-002"],["Revision","1.0"],["Date","2026-09-20"],
+          ["Platform baseline","AMD Zynq UltraScale+ RFSoC XCZU48DR (ZCU208 class)"],
+          ["Status","Engineering design book - issued for review"],
+          ["Companion documents","RAP-EDB-001 (integrated), GPR_SFCW v1.4, GPV ps-runtime + GPM v1.8"]]}
+]

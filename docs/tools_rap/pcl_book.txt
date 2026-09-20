@@ -1,0 +1,179 @@
+# Document map and engineering scope
+This book defines the PASSIVE-ONLY configuration of the counter-surveillance radar family: a silent receiver that detects, locates and classifies non-cooperative emitters and illumination echoes using broadcast waveforms of opportunity, with no transmitter of its own. It shares the passive sub-system design with RAP-EDB-001 (the integrated active-passive book) through a common shared section, and adds what only the standalone configuration can do best: very long coherent processing intervals, multi-node TDOA coherence across a site grid, and a forensic spectrum-surveillance mode with an evidence chain.
+| Part | Sections | Coverage |
+| I | 2-4 | silent mission, standalone architecture, multi-node coherence |
+| II | 5 | passive sub-system (shared design with RAP-EDB-001) |
+| III | 6-8 | survey and evidence mode, long-CPI memory design, standalone software |
+| IV | 9-12 | validation and acceptance, failure modes, traceability, references |
+| App | A-B | operational procedures, glossary |
+## Revision history
+| Rev | Date | Change |
+| 1.0 | 2026-09-20 | First issue; shares passive core with RAP-EDB-001 rev 1.0 |
+## Conventions
+Identical to RAP-EDB-001: [validated]/[derived]/[budget]/[simulated] labelling, diagrams versus seeded simulations stated per caption, integer-only data contracts, and the rule that no adaptive structure ships without a golden model that can replay it.
+
+# Mission: silent counter-surveillance
+## What silence buys and what it costs
+A receiver that never transmits cannot be found by a hostile RF-seeking sensor, cannot be jammed through its own emissions, and can listen continuously against covert emitters that no radar will ever see. That is the entire value proposition, and it is large: threat classes T1 (covert emitters) and T4 (hostile mapping radars) are observable only passively, and against T4 silence is survival.
+The costs are equally concrete and are stated here so that no operator expectation is wrong: no coverage against RF-silent targets (threat class T3 is out of scope by physics), range accuracy bounded by third-party bandwidth (750 m on FM, 19.7 m on DVB-T before geometry factors), dependence on broadcast infrastructure that can be switched off for maintenance, and 2-D fixes without a vertical baseline.
+## Operational profiles
+| Profile | Posture | Lane set | Notes |
+| P-SENTRY | permanent silent site guard | 2 CAF lanes + emitter scan | hours-long CPIs where bandwidth allows |
+| P-DEPLOY | rapid-deploy node on site grid | 1-2 CAF lanes + scan | battery/vehicle power, TDOA partner |
+| P-HUNT | operator-directed emitter hunt | survey-first, lanes on demand | evidence chain primary output |
+## Mission success criteria
+1. Every emitter of the site radio plan's exclusion list detected within one survey cycle at or above the sensitivity budget.
+2. Every air track held across illuminator outages by lane re-rank without operator action.
+3. Every fix and detection replayable offline from recorded IQ with identical hashes (forensic integrity).
+4. Zero own radiation at any time, verifiable by an external spectrum monitor during acceptance.
+
+# Standalone architecture
+FIG: master_pcl.png | Master block diagram of the passive-only box: reference and surveillance fields, one RFSoC, PL cancellation/CAF/CFAR/DOA, PS tracking/geolocation/evidence, operator and node coordinator at the edge.
+## Channel set difference versus the integrated box
+The standalone box has no active transmitter, therefore the AUX channel of the integrated design is repurposed as the wideband spectrum-survey channel (4x decimation option for zone-1 sweeps), and the own-TX blanking machinery of RAP-EDB-001 section 8 is absent: CPI scheduling is free, which is precisely why this configuration can run the 10-60 s FM CPIs that the integrated box must interrupt for dwells.
+| Channel | RFDC | Rate | Role here |
+| REF-1/2 | t0 b0/b1 | 2.4576 GSPS, DDC 32x | illuminator copies |
+| SURV-1..4 | t0 b2, t0 b3, t1 b0, t1 b1 | 2.4576 GSPS, DDC 32x | ULA, echoes, DOA |
+| SURVEY | t1 b2 | 2.4576 GSPS, 4x-32x | zone-1 sweep and emitter slices |
+## Power, enclosure, deployment
+Silent operation removes TX power; the box power profile is RFSoC plus clock plant plus front-end [budget 60 W typical], which makes P-DEPLOY battery profiles practical for multi-hour tasks. The enclosure keeps the calibration coupler accessible because field re-calibration is a routine event, not a depot event.
+
+# Multi-node coherence and site grid
+FIG: multinode_grid.png | Three-node site grid on a fibred 10 MHz reference: pairwise TDOA baselines and a three-node least-squares emitter fix.
+## Why the reference distribution is the system
+Single-node passive geolocation is an angle. Two nodes add a hyperbola. Three nodes make a fix. All of it depends on timestamps and carrier phase being comparable across nodes, which is a reference-distribution problem: the site grid fibres the 10 MHz reference (white-rabbit class [budget]) and every node's clock plant derives from it, so TDOA observables are coherent by construction and cue records associate without resynchronisation.
+## Degraded-mode policy
+- Fibre fault: node falls back to single-node AOA fixes and marks every fix record accordingly; the coordinator stops fusing that node's TDOA contributions but keeps its AOA.
+- Node loss: pairwise baselines re-solve automatically; fix covariances widen and the operator sees the widening, not a silent jump.
+- Reference holdover at one node: that node suspends TDOA contribution (phase assumption void) while keeping local lanes with a degraded flag.
+FIG: tdoa_err.png | Illustrative fix error ellipses per geolocation mode; the reporting layer must carry these covariances, never a bare point.
+
+# Passive sub-system (shared design)
+INCLUDE shared_passive.txt
+
+# Spectrum survey and evidence mode (P-HUNT)
+## Sweep architecture
+The survey channel sweeps Nyquist zone 1 (0-1228.8 MHz) in fabric-rate slices, building spectrogram pages in PS. Detection runs log-mean CFAR across frequency against an occupancy mask of the site radio plan (known-friendly emitters); anything outside the mask, or any mask member whose mask shape has changed, becomes an emitter event.
+FIG: survey_spec.png | Simulated survey spectrogram: broadcast masks plus a new narrowband emitter appearing at 940 MHz at epoch 40 - the event the sweep exists to catch [simulated].
+FIG: survey_plan.png | P-HUNT schedule: coarse sweep, hit reslices, DOA walks interleaved with CAF lane duty; lane integration loss from survey slices is priced, not ignored.
+## From event to evidence package
+1. Event: time, frequency mask, power history, sweep epoch.
+2. Reslice: narrowband IQ record (pre- and post-event 50 ms) into the ring.
+3. Features: occupied bandwidth, modulation family (OFDM CP length, FSK deviation, analogue deviation), burst/PRI structure, micro-Doppler comb presence.
+4. Classification: likelihood vector over threat families; below policy confidence the record stays an unresolved cluster forever - forcing a class is forbidden.
+5. Geolocation: DOA walk, TDOA with partner nodes if present.
+6. Evidence record: all of the above plus SHA-256 of the IQ and of the metadata block.
+FIG: evidence_chain.png | Evidence chain: event, IQ snippet, features, hash, signed archive record. Replay of any record through the golden model must reproduce its hash-derived features exactly.
+
+# Long-CPI memory design
+Narrowband illuminators buy Doppler resolution with time: a 60 s FM CPI resolves about 0.15 m/s radial at 100 MHz [derived]. Sixty seconds of reference data at 76.8 MS/s complex is 18.4 GB for two REF lanes - this is a memory-system design, not a DSP design.
+FIG: longcpi_mem.png | Memory hierarchy: RFDC lanes at 1.84 GB/s raw, PL batch windows in BRAM/URAM, long CPI rings in PS DDR, deterministic replay into the CAF.
+Rules:
+- PL never holds more than one batch window; rings live in DDR with a write pointer the PS owns.
+- Replay is deterministic: the same ring window read twice must produce bit-identical CAF input (the offline replay test checks exactly this).
+- Ring overrun policy: oldest-window drop with a header flag; a dropped window inside a track's CPI degrades that track's covariance, logged.
+EQ: bytes_ring = 2 lanes * 8 B/sample * 76.8e6 * T_int ;  T_int = 60 s -> 18.4 GB [derived]
+
+# Standalone software
+## Task set
+The PS runtime is the same skeleton discipline as the integrated book's section 10 minus fusion-with-active and arbiter-with-active: IRQ service per batch, ranking, ECA supervision, trackers, geolocation coordinator client, survey planner, evidence recorder, and a node-coordinator client that exchanges cue/fix records over the site LAN with common-reference timestamps.
+## Register map (passive-only variant)
+| Offset | Register | Meaning |
+| 0x00-0x0C | ID/CTRL/STATUS/IRQ | same discipline as validated active map |
+| 0x100 | PASS_CTRL | lane mask, batch code, survey enable |
+| 0x104 | PASS_STATUS | lane health word |
+| 0x108 | ILLUM_RANK | ranked lane table |
+| 0x110+ | LANE_tune[k] | DDC NCO, gain, filter index per lane |
+| 0x140 | CAF_CFG | T_int code (long-CPI codes here), batches, windows |
+| 0x144 | ECR_MON | residual taps |
+| 0x150 | CUE/FIX FIFO | records out |
+| 0x160 | SURVEY_PLAN | sweep map, mask index, slice budget |
+| 0x170 | EVID | recorder control, hash readback |
+| 0x180 | NODE | node id, TDOA clock offset words, coordinator address |
+## Data contract and replay
+FIG: data_contract.png | Integer-only self-describing record framing with CRC - identical contract to the integrated book, so one replay tool serves both configurations.
+Every spectrogram page, map page, cue/fix record and evidence record travels in this framing; the offline tool reprocesses recorded rings through pcl_chain_ref.m and geolocation_ref.m and compares feature hashes. A deployed node's acceptance test is its own archive.
+## Operator workstation views
+### Lane wall
+One tile per active lane: range-Doppler page with CFAR overlay, lane health strip (ECR monitor, REF echo monitor, scale saturation, calibration age), and the lane's current illuminator parameters. A degraded tile is visibly degraded; there is no mode in which a sick lane renders like a healthy one.
+### DOA rose and angle history
+Per-lane spatial spectrum rose with beamscan solid and MUSIC dashed where both run; angle history waterfall per track so operator eyes can see a DOA bias developing before the health monitor declares it.
+### Emitter table
+Every emitter event and track with class likelihood vector, covariance ellipse parameters, evidence hash, and persistence history. Unresolved clusters are rendered in a distinct style permanently.
+### Site map and baselines
+Fixes with error ellipses, node positions, baseline health (TDOA residual trend per pair), and the fibred-reference status per node. Degraded-node fixes change style the moment the node flags itself.
+### Evidence browser and replay
+Archive tree by day and node; one-click replay of any record through pcl_chain_ref/geolocation_ref with hash comparison displayed; export bundles archive plus tool versions for external examination.
+### Silence monitor
+During acceptance and periodically in service, an external spectrum monitor's verdict is ingested and displayed: the system's claim of silence is verified by an instrument that is not the system.
+## Baseline geometry design
+FIG: tdoa_baseline.png | Two-node TDOA fix error versus baseline length for a DVB-T-class lane: the 150 m CEP50 budget sets the minimum site-grid spacing [illustrative model].
+Baseline placement is a design variable of the site grid: too short and the hyperbola curvature vanishes into AOA error; too long and the common-reference distribution cost dominates. The chart above is recomputed per site with the site's actual illuminator set at commissioning and stored with the configuration version.
+
+# Validation and acceptance
+## Golden models and testbenches
+- Shared: passive_channel_sim.m, pcl_chain_ref.m with tb_chan, tb_refcond, tb_eca, tb_caf, tb_cfar2d, tb_doa (bit-exact or stated-LSB versus ROM).
+- Standalone additions: geolocation_ref.m (AOA/TDOA CRLB-consistent fixes), survey_ref.m (mask CFAR on synthetic spectra), tb_tdoa (two-node timestamp association), tb_survey (event and feature extraction), tb_ring (deterministic replay and overrun flags).
+## Gates
+| Gate | Content | Pass |
+| G0-G2 | shared bit-exact gates | as RAP-EDB-001 |
+| G-RES | passive lane OOC synthesis | within budget |
+| G4' | cable TDOA/DOA loopback | fix within stated covariance |
+| G5' | field: ECR survey, fix accuracy vs surveyed truth, evidence audit | metrics below |
+## Acceptance metrics [budget]
+| Metric | Target |
+| ECR strongest DPI | >= 80 dB |
+| CAF gain vs theory | within 1 dB |
+| DOA rms at SNR >= 20 dB | <= 3 deg |
+| two-node fix CEP50 urban DVB-T lane | <= 150 m |
+| emitter sensitivity | -100 dBm in-band, Pd 0.9 at 1e-6 FA/h |
+| FM 60 s CPI Doppler resolution | <= 0.02 Hz (about 0.15 m/s at 100 MHz) [derived] |
+| replay hash equality | 100 percent of sampled records |
+| own radiation | zero, external monitor verified |
+
+# Failure modes and diagnostics (standalone)
+| Failure | Observable | Response |
+| illuminator maintenance outage | REF power drop | re-rank; profile degrades gracefully, operator notified |
+| reference distribution fault | TDOA residual jump | single-node AOA fallback with flagged covariances |
+| ULA element fault | DOA bias, sidelobe rise | element health injection, array re-cal |
+| dense co-channel emitters | classification confidence collapse | unresolved cluster record, never forced class |
+| survey self-blindness during long CPI | missed new emitters | interleaved slices priced into schedule |
+| ring overrun | header drop flags | covariance degradation logged per track |
+| evidence ring half-full unserviced | IRQ latency monitor | recorder stalls lanes per policy (integrity over continuity) |
+
+# Requirements traceability (standalone)
+| Req | Statement | Validation |
+| REQ-P-001 | zero own radiation | external monitor, acceptance |
+| REQ-P-002 | T1 detection sensitivity -100 dBm class | G5' survey exercise |
+| REQ-P-003 | two-node fix CEP50 <= 150 m urban | G5' surveyed truth |
+| REQ-P-004 | long-CPI replay determinism | tb_ring + archive audit |
+| REQ-P-005 | lane outage continuity without operator | re-rank exercise |
+| REQ-P-006 | evidence integrity (hashes) | replay audit 100 percent |
+| REQ-P-007 | degraded modes flagged, never silent | fault injection table |
+
+# References
+1. RAP-EDB-001 rev 1.0 - integrated book; shared passive core sections.
+2. GPV ps-runtime / GPM v1.8 - software discipline, RFDC practice, gate philosophy.
+3. AMD UG1410, PG269 - board and converter facts.
+4. Griffiths & Long 1986; Howland 1999; Colone et al.; Bournaka et al. 2008; Malanowski et al.; Skolnik Radar Handbook.
+5. Site radio plan template and occupancy mask format - operator document, referenced not reproduced.
+
+# Appendix A - Operational procedures
+## Commissioning sequence
+1. Clock plant acceptance (phase_drift chart per lane family). 2. Cable/path calibration per band. 3. Array calibration per band. 4. 24 h ECR baseline survey. 5. Illuminator survey vs site radio plan; ranking table signed off. 6. Cooperative emitter exercise for TDOA covariance validation. 7. Evidence replay audit on the commissioning archive.
+## Daily health review
+Lane health words (ECR monitor, REF echo monitor, scale saturation, calibration age), ranking changes since last review, ring drop flags, and the silence monitor log. Any lane whose ECR monitor trends toward budget is re-calibrated before it becomes an alarm.
+## Evidence handling rules
+Records are append-only; hashes are computed at creation in PS and re-verified at archive; no record is editable, only annotated by separate annotation records that reference the original hash. Court-facing export is the archive plus the replay tool plus the golden model versions, so that any examiner can reproduce every feature.
+
+# Appendix B - Glossary
+| Term | Meaning |
+| PCL | passive coherent location |
+| CAF | cross-ambiguity function |
+| ECA / ECR | extensive cancellation algorithm / ratio |
+| DPI | direct-path interference |
+| CPI | coherent processing interval |
+| TDOA / AOA / FDOA | time / angle / frequency difference of arrival |
+| ULA | uniform linear array |
+| CEP50 | 50 percent circular error probable |
+| site radio plan | operator list of known-friendly emitters and masks |
