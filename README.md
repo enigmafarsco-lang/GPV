@@ -161,7 +161,25 @@ regression uses.
 
 ## 4. Building for the ZCU208
 
-Requires **Vivado 2023.2 or 2024.x** with ZCU208 board files.
+Requires **Vivado 2023.2 through 2025.x** with ZCU208 board files (any
+revision — the script picks whatever `*zcu208*` board part is installed).
+Tested path notes for 2025.1: the unified RF Data Converter IP
+(`usp_rf_data_converter`, v2.6) is unchanged across 2025.x, the RTL is plain
+Verilog-2005 — no migration needed — and the 2025.1 switch of `.xci` files to
+JSON does not affect this flow (the BD is generated from Tcl; no `.xci` is
+checked in).
+
+**Part number note (important):** UG1410 and the AMD kit page describe the
+ZCU208 silicon as `XCZU48DR-2FSVG1517E`, i.e. the SCD5184 special-code
+device; the standard Vivado catalog lists the ZU48DR in FFVE1156/FSVE1156
+packages (UG1075), and not every install carries the SCD string. The build
+script therefore **resolves the part at run time** against your install
+(`get_parts`): it prefers `xczu48dr-2fsvg1517e` when present, then
+`-2ffve1156e` / `-2fsve1156e`, then any `xczu48dr*`, and prints the choice.
+If `get_parts xczu48dr*` returns nothing, your install lacks RFSoC device
+support (Vivado installer → Add Design Tools or Devices → SoC → Zynq
+UltraScale+ RFSoC), or — for SCD5184 kits — the device pack that ships with
+the node-locked ZCU208 license.
 
 ```bash
 # quick flat synthesis: utilisation + timing sanity (no BD, no bitstream)

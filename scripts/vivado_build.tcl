@@ -1,6 +1,7 @@
 # =============================================================================
 # vivado_build.tcl - build the GPR PL chain for the AMD RFSoC ZCU208
-#                    (XCZU48DR-2FSVG1517E), Vivado 2023.2 / 2024.x
+#                    (XCZU48DR-2FSVG1517E), Vivado 2023.2 through 2025.x
+#                    (RFDC IP 2.6 is unchanged across 2025.1/2025.2)
 #
 # Usage:
 #   # quick flat synthesis: utilisation + timing reports, no BD, no bitstream
@@ -21,8 +22,29 @@ set rtl_dir    "$fpga_dir/rtl"
 set xdc_dir    "$fpga_dir/xdc"
 set prj_dir    "$fpga_dir/vivado_prj"
 
-set part        xczu48dr-2fsvg1517e
-set board_part  xilinx.com:zcu208:part0:3.0   ;# adjust to installed version
+# Part selection.  UG1410 / the AMD kit page describe the ZCU208 silicon as
+# XCZU48DR-2FSVG1517E (SCD5184 special silicon), but the standard Vivado part
+# catalog offers the ZU48DR in FFVE1156 / FSVE1156 packages (UG1075), and the
+# SCD string is only present in installs that include it.  Resolve against
+# THIS install's catalog instead of hardcoding: prefer an exact FSVG1517
+# match when available, then the standard packages, then any xczu48dr*.
+set part_prefs {xczu48dr-2fsvg1517e xczu48dr-2ffve1156e xczu48dr-2fsve1156e}
+set part ""
+foreach p $part_prefs {
+    if {[llength [get_parts -quiet $p]] > 0} { set part $p; break }
+}
+if {$part eq ""} {
+    set c [get_parts -quiet xczu48dr*]
+    if {[llength $c] > 0} { set part [lindex $c 0] }
+}
+if {$part eq ""} {
+    error "No xczu48dr part in this Vivado install. Run: get_parts xczu48dr*\n\
+If empty, add RFSoC device support (Vivado installer > Add Design Tools or\n\
+Devices > SoC > Zynq UltraScale+ RFSoC), or for SCD5184 kits install the\n\
+device pack bundled with the node-locked ZCU208 license."
+}
+puts "=== Using part: $part"
+set board_part  ""   ;# resolved below from installed board files
 set top_module  gpr_top_zcu208
 set full_build  [expr {[llength $argv] > 0 && [lindex $argv 0] eq "full"}]
 file mkdir "$fpga_dir/reports"
@@ -31,9 +53,13 @@ file mkdir "$fpga_dir/reports"
 # project
 # ----------------------------------------------------------------------------
 create_project gpr_zcu208 $prj_dir -part $part -force
-if {[catch {set_property board_part $board_part [current_project]} err]} {
-    puts "WARNING: ZCU208 board part not available ($err)."
-    puts "         Continuing part-only; the FULL BD flow needs board files."
+set bcands [get_board_parts -quiet *zcu208*]
+if {[llength $bcands] > 0} {
+    set_property board_part [lindex $bcands end] [current_project]
+    puts "=== Using board part: [lindex $bcands end]"
+} else {
+    puts "WARNING: no ZCU208 board part installed - continuing part-only."
+    puts "         The FULL BD flow needs the ZCU208 board files."
 }
 
 # RTL sources (golden ROM hex files live in fpga/golden and fpga/sim; they are
@@ -105,24 +131,48 @@ catch {
 # real 2GSPS->IQ.  DAC tile 224 converter 0, fs = 4.9152 GSPS, 4x
 # interpolation, fine NCO per sub-band.  Property names vary between IP
 # versions - each is applied under catch and reported.
-set rfdc [create_bd_cell -type ip -vlnv xilinx.com:ip:usmp_rf_data_converter rfdc]
+# The unified 'Zynq Ultrascale+ RF Data Converter' IP (usp_rf_data_converter,
+# v2.6 in 2024.x/2025.x) covers Gen1-Gen3 RFSoC incl. the ZU48DR on ZCU208.
+# Older docs/examples used usmp_rf_data_converter - try both.
+set rfdc_ok 0
+foreach vlnv {xilinx.com:ip:usp_rf_data_converter xilinx.com:ip:usmp_rf_data_converter} {
+    if {![catch {create_bd_cell -type ip -vlnv $vlnv rfdc} cerr]} {
+        puts "RFDC IP: $vlnv"
+        set rfdc_ok 1
+        break
+    }
+    puts "NOTE: $vlnv not available ($cerr)"
+}
+if {!$rfdc_ok} { error "No RF Data Converter IP found - check your Vivado install" }
+
+# Converter-level properties first, then per-slice fallbacks (naming varies
+# between IP revisions; everything is catch-guarded).  Anything that warns
+# must be finished in the GUI against the README section-4 table; run
+#   report_property [get_bd_cells rfdc]
+# to list the property names your IP version actually supports.
 foreach {prop val} {
-    CONFIG.ADC0_Enable              {1}
-    CONFIG.ADC0_Sampling_Rate     {4.9152}
-    CONFIG.ADC0_Refclk_Freq       {0.12288}
-    CONFIG.ADC0_Fabric_Freq       {245.76}
-    CONFIG.ADC0_Decimation_Mode   {4X}
-    CONFIG.ADC0_Mixer_Mode        {Fine}
-    CONFIG.ADC0_Data_Width        {4}
-    CONFIG.DAC0_Enable            {1}
-    CONFIG.DAC0_Sampling_Rate     {4.9152}
-    CONFIG.DAC0_Refclk_Freq       {0.12288}
-    CONFIG.DAC0_Fabric_Freq       {245.76}
-    CONFIG.DAC0_Interpolation_Mode {4X}
-    CONFIG.DAC0_Mixer_Mode        {Fine}
+    CONFIG.ADC0_Enable               {1}
+    CONFIG.ADC0_Sampling_Rate        {4.9152}
+    CONFIG.ADC0_Refclk_Freq          {0.12288}
+    CONFIG.ADC0_Fabric_Freq          {245.76}
+    CONFIG.ADC0_Decimation_Mode      {4X}
+    CONFIG.ADC0_Mixer_Mode           {Fine}
+    CONFIG.ADC0_Data_Width           {4}
+    CONFIG.ADC_Slice00_Enable        {true}
+    CONFIG.ADC_Decimation_Mode00     {4X}
+    CONFIG.ADC_Mixer_Type00          {Fine}
+    CONFIG.DAC0_Enable               {1}
+    CONFIG.DAC0_Sampling_Rate        {4.9152}
+    CONFIG.DAC0_Refclk_Freq          {0.12288}
+    CONFIG.DAC0_Fabric_Freq          {245.76}
+    CONFIG.DAC0_Interpolation_Mode   {4X}
+    CONFIG.DAC0_Mixer_Mode           {Fine}
+    CONFIG.DAC_Slice00_Enable        {true}
+    CONFIG.DAC_Interpolation_Mode00  {4X}
+    CONFIG.DAC_Mixer_Type00          {Fine}
 } {
     if {[catch {set_property $prop $val $rfdc} err]} {
-        puts "WARNING: RFDC $prop not applied ($err) - configure in GUI."
+        puts "WARNING: RFDC $prop not applied ($err)"
     }
 }
 
