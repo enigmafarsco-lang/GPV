@@ -22,29 +22,42 @@ set rtl_dir    "$fpga_dir/rtl"
 set xdc_dir    "$fpga_dir/xdc"
 set prj_dir    "$fpga_dir/vivado_prj"
 
-# Part selection.  UG1410 / the AMD kit page describe the ZCU208 silicon as
-# XCZU48DR-2FSVG1517E (SCD5184 special silicon), but the standard Vivado part
-# catalog offers the ZU48DR in FFVE1156 / FSVE1156 packages (UG1075), and the
-# SCD string is only present in installs that include it.  Resolve against
-# THIS install's catalog instead of hardcoding: prefer an exact FSVG1517
-# match when available, then the standard packages, then any xczu48dr*.
-set part_prefs {xczu48dr-2fsvg1517e xczu48dr-2ffve1156e xczu48dr-2fsve1156e}
+# Part + board selection.  UG1410 / the AMD kit page describe the ZCU208
+# silicon as XCZU48DR-2FSVG1517E (SCD5184 special silicon), but the standard
+# Vivado catalog offers the ZU48DR in FFVE1156 / FSVE1156 packages (UG1075)
+# and the SCD string only exists in installs carrying the SCD device pack.
+# A bitstream must match the PHYSICAL package, so never guess blindly:
+#   1. trust the installed ZCU208 board file - AMD keeps board part and part
+#      string consistent per Vivado release (query its 'part' property);
+#   2. else fall back to this catalog's xczu48dr* strings;
+#   3. else error with actionable guidance.
 set part ""
-foreach p $part_prefs {
-    if {[llength [get_parts -quiet $p]] > 0} { set part $p; break }
+set board_part ""
+set bcands [get_board_parts -quiet *zcu208*]
+if {[llength $bcands] > 0} {
+    set board_part [lindex $bcands end]
+    set part [get_property part [get_board_parts $board_part]]
+    puts "=== Board part: $board_part declares part: $part"
 }
-if {$part eq ""} {
-    set c [get_parts -quiet xczu48dr*]
-    if {[llength $c] > 0} { set part [lindex $c 0] }
+if {$part eq "" || [llength [get_parts -quiet $part]] == 0} {
+    set part ""
+    foreach p {xczu48dr-2fsvg1517e xczu48dr-2ffve1156e xczu48dr-2fsve1156e} {
+        if {[llength [get_parts -quiet $p]] > 0} { set part $p; break }
+    }
+    if {$part eq ""} {
+        set c [get_parts -quiet xczu48dr*]
+        if {[llength $c] > 0} { set part [lindex $c 0] }
+    }
 }
 if {$part eq ""} {
     error "No xczu48dr part in this Vivado install. Run: get_parts xczu48dr*\n\
 If empty, add RFSoC device support (Vivado installer > Add Design Tools or\n\
-Devices > SoC > Zynq UltraScale+ RFSoC), or for SCD5184 kits install the\n\
-device pack bundled with the node-locked ZCU208 license."
+Devices > SoC > Zynq UltraScale+ RFSoC).  If your kit is SCD5184 silicon\n\
+(FSVG1517 package) and only FFVE1156/FSVE1156 exist in the catalog, install\n\
+the SCD device pack shipped with the node-locked ZCU208 license - an\n\
+FFVE1156 bitstream will NOT program on FSVG1517 silicon."
 }
 puts "=== Using part: $part"
-set board_part  ""   ;# resolved below from installed board files
 set top_module  gpr_top_zcu208
 set full_build  [expr {[llength $argv] > 0 && [lindex $argv 0] eq "full"}]
 file mkdir "$fpga_dir/reports"
@@ -53,10 +66,8 @@ file mkdir "$fpga_dir/reports"
 # project
 # ----------------------------------------------------------------------------
 create_project gpr_zcu208 $prj_dir -part $part -force
-set bcands [get_board_parts -quiet *zcu208*]
-if {[llength $bcands] > 0} {
-    set_property board_part [lindex $bcands end] [current_project]
-    puts "=== Using board part: [lindex $bcands end]"
+if {$board_part ne ""} {
+    set_property board_part $board_part [current_project]
 } else {
     puts "WARNING: no ZCU208 board part installed - continuing part-only."
     puts "         The FULL BD flow needs the ZCU208 board files."
